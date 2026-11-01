@@ -512,6 +512,47 @@ th {
     background-color: #a82520;
 }
 
+.additional-comments-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    font: inherit;
+    resize: vertical;
+}
+
+.additional-comments-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.save-comments-button {
+    background-color: #111111;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.save-comments-button:hover {
+    background-color: #444444;
+}
+
+.comments-status {
+    font-size: 0.85rem;
+    color: #2e7d32;
+}
+
+.comments-status-error {
+    color: #d73027;
+}
+
 .preview-placeholder {
     display: inline-block;
     width: 50px;

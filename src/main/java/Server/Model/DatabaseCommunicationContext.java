@@ -209,7 +209,7 @@ public class DatabaseCommunicationContext {
 
         String sql = "SELECT i.incident_id, i.device_event_id, i.timestamp_ms, i.latitude, "
                 + "i.longitude, i.accuracy_meters, i.distance_cm, i.time_offset_ms, i.is_anonymized, "
-                + "v.license_plate, v.state_or_region, v.vehicle_make, v.vehicle_model, v.vehicle_color "
+                + "i.additional_comments, v.license_plate, v.state_or_region, v.vehicle_make, v.vehicle_model, v.vehicle_color "
                 + "FROM incidents i "
                 + "LEFT JOIN offender_vehicles v ON v.incident_id = i.incident_id "
                 + "ORDER BY i.timestamp_ms DESC LIMIT ? OFFSET ?";
@@ -232,6 +232,7 @@ public class DatabaseCommunicationContext {
                     incident.put("distance_cm", rs.getInt("distance_cm"));
                     incident.put("time_offset_ms", rs.getInt("time_offset_ms"));
                     incident.put("is_anonymized", rs.getBoolean("is_anonymized"));
+                    incident.put("additional_comments", rs.getString("additional_comments"));
                     incident.put("license_plate", rs.getString("license_plate"));
                     incident.put("state_or_region", rs.getString("state_or_region"));
                     incident.put("vehicle_make", rs.getString("vehicle_make"));
@@ -245,6 +246,26 @@ public class DatabaseCommunicationContext {
         }
 
         return incidents;
+    }
+
+    /**
+     * Replace the additional comments of an incident.
+     *
+     * @return true if the incident exists and was saved, false otherwise.
+     */
+    public boolean updateAdditionalComments(long incidentId, String additionalComments) {
+        String sql = "UPDATE incidents SET additional_comments = ? WHERE incident_id = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, additionalComments);
+            ps.setLong(2, incidentId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating additional comments: " + e.getMessage());
+            return false;
+        }
     }
 
     /**

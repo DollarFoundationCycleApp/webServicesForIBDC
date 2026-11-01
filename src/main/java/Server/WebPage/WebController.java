@@ -47,6 +47,9 @@ public class WebController {
 
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("MM/dd/yyyy h:mm a");
 
+    // Matches the textarea's maxlength; fits in the TEXT column even at 4 bytes per character
+    private static final int MAX_ADDITIONAL_COMMENTS_LENGTH = 5000;
+
     // Demo data until incidents come from the app
     private static final List<Incident> SAMPLE_INCIDENTS = List.of(
             new Incident("1", 33.4302, -111.9428, "TMP1001", "img-0004", "Minor",
@@ -193,7 +196,8 @@ public class WebController {
                 text(row.get("vehicle_color")),
                 0,
                 LocalDateTime.ofInstant(Instant.ofEpochMilli(timestampMs), ZoneOffset.UTC),
-                Boolean.TRUE.equals(row.get("is_anonymized")));
+                Boolean.TRUE.equals(row.get("is_anonymized")),
+                text(row.get("additional_comments")));
     }
 
     private static String text(Object value) {
@@ -308,6 +312,30 @@ public class WebController {
         model.addAttribute("databaseIncidentIds", data.databaseIds());
         return "incidentView";
     }
+
+    /**
+     * Save the additional comments of a database incident. Any signed-in user
+     * may edit them. Sample incidents have no row to save to, so they report
+     * a failed save.
+     */
+    @PostMapping({"/incident/{id}/comments"})
+    public String saveAdditionalComments(@CookieValue(value = "SESSION", required = false) String session,
+                @PathVariable String id, @RequestParam String additionalComments) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+
+        // Browsers send line breaks as \r\n, but maxlength counts them as one character
+        String comments = additionalComments.replace("\r\n", "\n").strip();
+        if (comments.length() > MAX_ADDITIONAL_COMMENTS_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Additional comments are too long");
+        }
+
+        IncidentData data = loadIncidentData();
+        String incidentId = findIncident(data, id).incidentId();
+        boolean saved = db != null && data.databaseIds().contains(incidentId)
+                && db.updateAdditionalComments(Long.parseLong(incidentId), comments.isEmpty() ? null : comments);
+        return "redirect:/incident/" + incidentId + "?commentsSaved=" + saved; }
 
     @PostMapping({"/incident/{id}/delete"})
     public String deleteIncident(@CookieValue(value = "SESSION", required = false) String session,

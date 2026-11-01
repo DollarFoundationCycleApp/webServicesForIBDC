@@ -526,6 +526,41 @@ th {
     color: #333333;
 }
 
+/* Reports table */
+.reports-table th,
+.reports-table td {
+    padding: 10px 8px;
+}
+
+.reports-table th {
+    background-color: #c8c8c8;
+    color: #222222;
+    border-bottom: 1px solid black;
+}
+
+.reports-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.reports-table tr:hover {
+    background-color: #fff4ea;
+}
+
+.reports-table input[type="checkbox"] {
+    accent-color: #ff6600;
+    cursor: pointer;
+}
+
+.incident-link {
+    color: #ff6600;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.incident-link:hover {
+    text-decoration: underline;
+}
+
 /* Reports Page Selector */
 .page-selector {
     display: flex;

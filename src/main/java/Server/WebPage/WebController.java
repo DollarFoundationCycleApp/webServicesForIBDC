@@ -30,6 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 import Server.Controller.AuthenticationController;
 import Server.Model.DatabaseCommunicationContext;
 import Server.Model.Incident;
+import jakarta.servlet.http.HttpSession;
 
 @Controller
 public class WebController {
@@ -364,31 +365,70 @@ public class WebController {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
-    @GetMapping({"/reports"})
-    public String reports(@CookieValue(value = "SESSION", required = false) String session, 
-                        @RequestParam(defaultValue = "1") int pageNum, 
-                        @RequestParam(defaultValue = "10") int incidentsPerPage, Model model) { 
+
+    @PostMapping({"/reports"})
+    public String searchReports(@CookieValue(value = "SESSION", required = false) String session,
+                    @RequestParam(defaultValue = "") String keyword,
+                    @RequestParam(defaultValue = "10") int limit,
+                    HttpSession httpSession) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        if (incidentsPerPage < 1) incidentsPerPage = 10;
+        if (limit <= 0) limit = 10; 
+    
+        httpSession.setAttribute("keyword", keyword.trim());
+        httpSession.setAttribute("limit", limit);
+        return "redirect:/reports"; 
+    }
+
+    @GetMapping({"/reports"})
+    public String reports(@CookieValue(value = "SESSION", required = false) String session, 
+                        @RequestParam(defaultValue = "1") int pageNum, 
+                        HttpSession httpSession,Model model) { 
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+
+        int limit;
+        try {
+            limit = Integer.parseInt(httpSession.getAttribute("limit").toString());
+        } catch (Exception e) {
+            limit = 10;
+        }
+        String keyword = (String) httpSession.getAttribute("keyword");
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()
+                .filter(incident -> keywordFilter(incident, keyword))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
-        int totalPages = (int) Math.ceil(allIncidents.size() / (double) incidentsPerPage);
-        int from = (Math.min(pageNum, totalPages) - 1) * incidentsPerPage;
-        int to = Math.min(from + incidentsPerPage, allIncidents.size());
+        int totalPages = Math.max(1, (int) Math.ceil(allIncidents.size() / (double) limit));
+        int from = (Math.min(pageNum, totalPages) - 1) * limit;
+        int to = Math.min(from + limit, allIncidents.size());
         
         model.addAttribute("incidents", allIncidents.subList(from, to));
-        model.addAttribute("incidentsPerPage", incidentsPerPage);
+        model.addAttribute("limit", limit);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("currentPage", Math.min(pageNum, totalPages));
         model.addAttribute("pageButtons", pageButtons(Math.min(pageNum, totalPages), totalPages));
+        model.addAttribute("keyword", keyword);
 
-        return "reportsView"; }
+        return "reportsView"; 
+    }
 
+    private static boolean keywordFilter(Incident incident, String keyword) {
+        if (keyword == null || keyword.isEmpty()) {
+            return true;
+        }
+        String lowerKeyword = keyword.toLowerCase();
+        return incident.incidentId().toLowerCase().contains(lowerKeyword) ||
+                incident.driverInformation().toLowerCase().contains(lowerKeyword) ||
+                incident.extraComment().toLowerCase().contains(lowerKeyword);
+    }
+
+    /**
+     * Helper to build a list of page buttons
+     */
     private static List<Integer> pageButtons(int current, int total) {
     TreeSet<Integer> pages = new TreeSet<>();
     for (int p : new int[]{1, current - 1, current, current + 1, total}) {

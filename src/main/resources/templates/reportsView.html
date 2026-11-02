@@ -4,12 +4,17 @@
     <th:block th:fragment="content">
         <!-- Page Specific content-->
 
-        <div class="keyword-filter">
+        <form class="keyword-filter" th:action="@{/reports}" method="post">
+            <input type="hidden" name="limit" th:value="${limit}">
             <div class="keyword-filter-wrap">
-                <input type="text" id="keyword" name="keyword" placeholder="Search by location or keyword" autocomplete="off">
-                <img class="icon" th:src="@{/icons/magnify.svg}" alt="">
+                <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                    placeholder="Search by location or keyword" autocomplete="off">
+                <button type="submit" aria-label="Search">
+                    <img class="icon" th:src="@{/icons/magnify.svg}" alt="">
+                </button>
             </div>
-        </div>
+        </form>
+
         <div class="panel" style="width: 1500px;">
             <table class="reports-table">
                 <colgroup>
@@ -34,8 +39,11 @@
                         <th>Image Preview</th>
                     </tr>
                 </thead>
+                <tr th:if="${#lists.isEmpty(incidents)}">
+                    <td colspan="8">No incidents match your search.</td>
+                </tr>
                 <tr class="incident-row" th:each="incident : ${incidents}">
-                    <td><input type="checkbox" th:id="|incident-${incident.incidentId}|"></td>
+                    <td><input type="checkbox"></td>
                     <td>
                         <a class="incident-link" th:href="@{/incident/{id}(id=${incident.incidentId})}"
                         th:text="${incident.incidentId}">N/A</a>
@@ -51,27 +59,51 @@
 
             <nav class="page-selector" th:if="${totalPages gt 1}">
                 <a class="page-button" th:classappend="${currentPage == 1} ? 'disabled'"
-                th:href="@{/reports(pageNum=${currentPage - 1}, incidentsPerPage=${incidentsPerPage})}">&laquo;</a>
+                th:href="@{/reports(pageNum=${currentPage - 1}, limit=${limit})}">&laquo;</a>
     
                 <th:block th:each="p : ${pageButtons}">
                     <span class="page-button ellipsis" th:if="${p == -1}">...</span>
                     <a class="page-button" th:unless="${p == -1}"
                     th:classappend="${p == currentPage} ? 'active'"
-                    th:href="@{/reports(pageNum=${p}, incidentsPerPage=${incidentsPerPage})}" th:text="${p}">1</a>
+                    th:href="@{/reports(pageNum=${p}, limit=${limit})}" th:text="${p}">1</a>
                 </th:block>
     
                 <a class="page-button" th:classappend="${currentPage == totalPages} ? 'disabled'"
-                th:href="@{/reports(pageNum=${currentPage + 1}, incidentsPerPage=${incidentsPerPage})}">&raquo;</a>
+                th:href="@{/reports(pageNum=${currentPage + 1}, limit=${limit})}">&raquo;</a>
             </nav>
         </div>
 
         <script>
-            document.querySelectorAll('.incident-row').forEach(row => {
+            const selectAllCheckbox = document.getElementById('all-incidents');
+            const rows = document.querySelectorAll('.incident-row');
+
+            selectAllCheckbox.addEventListener('change', function () {
+                rows.forEach(row => {
+                    row.querySelector('input[type="checkbox"]').checked = this.checked;
+                });
+            });
+            
+            
+            rows.forEach(row => {
                 row.addEventListener('click', function (event) {
                     const checkbox = this.querySelector('input[type="checkbox"]');
                     if (event.target !== checkbox && event.target !== this.querySelector('.incident-link')) {
                         checkbox.checked = !checkbox.checked;
-                    }                    
+                    }
+
+                    if (rows.length === document.querySelectorAll('.incident-row input[type="checkbox"]:checked').length) {
+                        selectAllCheckbox.checked = true;
+                    } else {
+                        selectAllCheckbox.checked = false;
+                    }
+                });
+            });
+
+            document.getElementById('all-incidents').addEventListener('click', function (event) {
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                document.querySelectorAll('.incident-row').forEach(row => {
+                    const rowCheckbox = row.querySelector('input[type="checkbox"]');
+                    rowCheckbox.checked = checkbox.checked;
                 });
             });
         </script>

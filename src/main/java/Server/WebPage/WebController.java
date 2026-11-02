@@ -374,27 +374,22 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        if (limit <= 0) limit = 10; 
     
         httpSession.setAttribute("keyword", keyword.trim());
-        httpSession.setAttribute("limit", limit);
         return "redirect:/reports"; 
     }
 
     @GetMapping({"/reports"})
     public String reports(@CookieValue(value = "SESSION", required = false) String session, 
                         @RequestParam(defaultValue = "1") int pageNum, 
+                        @RequestParam(defaultValue = "10") int limit, 
                         HttpSession httpSession,Model model) { 
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
+        if (limit <= 0) limit = 10; 
 
-        int limit;
-        try {
-            limit = Integer.parseInt(httpSession.getAttribute("limit").toString());
-        } catch (Exception e) {
-            limit = 10;
-        }
+
         String keyword = (String) httpSession.getAttribute("keyword");
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()

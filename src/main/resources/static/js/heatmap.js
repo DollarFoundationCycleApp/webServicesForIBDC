@@ -77,9 +77,9 @@
          if (!incident.hideInfo) {
             rows.push(['Driver information', incident.driverInformation || 'None given']);
             rows.push(['Comment', incident.extraComment || 'None']);
+            rows.push(['Image ID', incident.imageId]);
          }
-        rows.push(['Image ID', incident.imageId]);
-        
+
 
         var content = document.createElement('div');
         var title = document.createElement('a');

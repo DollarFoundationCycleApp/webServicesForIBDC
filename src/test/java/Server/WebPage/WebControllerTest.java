@@ -4,6 +4,8 @@ import Server.Controller.AuthenticationController;
 import Server.Model.DatabaseCommunicationContext;
 import Server.Model.Incident;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.springframework.http.HttpStatus;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mockStatic;
 
 public class WebControllerTest {
 
@@ -55,6 +58,14 @@ public class WebControllerTest {
             row.put("is_anonymized", true);
             row.put("additional_comments", "stored text");
             return List.of(row);
+        }
+
+        @Override
+        public List<Map<String, Object>> getIncidentPhotos(long incidentId) {
+            Map<String, Object> photo = new HashMap<>();
+            photo.put("photo_data", new byte[] {1});
+            photo.put("format", "jpeg");
+            return List.of(photo);
         }
 
         @Override
@@ -109,5 +120,83 @@ public class WebControllerTest {
 
         assertNull(hidden.licensePlate());
         assertEquals("shared", hidden.additionalComments());
+    }
+
+    @Test
+    public void hidingInfoRemovesEveryPrivateField() {
+        Incident incident = new Incident("1", 0, 0, "PLATE", "img", "None", false, "driver", "comment",
+                "", "", "", 0, LocalDateTime.now(), true, "shared");
+
+        Incident hidden = Incident.hideInfo(incident);
+
+        assertNull(hidden.licensePlate());
+        assertNull(hidden.driverInformation());
+        assertNull(hidden.extraComment());
+        assertNull(hidden.imageId());
+    }
+
+    /** Sample incident 3 is marked private. */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void heatmapOmitsPrivateFieldsOfPrivateIncidents() {
+        ExtendedModelMap model = new ExtendedModelMap();
+        String session = AuthenticationController.authenticateUser("admin", "password");
+
+        new WebController(null).heatmap(session, model);
+
+        Map<String, Object> incident = ((List<Map<String, Object>>) model.getAttribute("incidents")).stream()
+                .filter(fields -> "3".equals(fields.get("incidentId")))
+                .findFirst()
+                .orElseThrow();
+        assertFalse(incident.containsKey("licensePlate"));
+        assertFalse(incident.containsKey("driverInformation"));
+        assertFalse(incident.containsKey("extraComment"));
+        assertFalse(incident.containsKey("imageId"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void nonAdminPagesReceiveNoPrivateData() {
+        try (MockedStatic<AuthenticationController> auth = mockStatic(AuthenticationController.class)) {
+            auth.when(() -> AuthenticationController.isValidSession("user")).thenReturn(true);
+            WebController controller = new WebController(null);
+
+            ExtendedModelMap dashboard = new ExtendedModelMap();
+            controller.dashboard("user", dashboard);
+            assertPrivateIncidentMasked((List<Incident>) dashboard.getAttribute("incidents"));
+
+            ExtendedModelMap incidentPage = new ExtendedModelMap();
+            controller.incident("user", "3", incidentPage);
+            assertPrivateIncidentMasked((List<Incident>) incidentPage.getAttribute("incidents"));
+            assertNull(((Incident) incidentPage.getAttribute("incident")).licensePlate());
+        }
+    }
+
+    private static void assertPrivateIncidentMasked(List<Incident> incidents) {
+        Incident incident = incidents.stream()
+                .filter(i -> i.incidentId().equals("3"))
+                .findFirst()
+                .orElseThrow();
+        assertNull(incident.licensePlate());
+        assertNull(incident.driverInformation());
+        assertNull(incident.extraComment());
+        assertNull(incident.imageId());
+    }
+
+    /** Incident 100 in the fake database is private and has a photo. */
+    @Test
+    public void privatePhotoIsOnlyServedToAdmins() {
+        String admin = AuthenticationController.authenticateUser("admin", "password");
+        WebController controller = new WebController(new FakeDatabase());
+
+        assertEquals(HttpStatus.OK, controller.incidentPhoto(admin, 100L).getStatusCode());
+
+        try (MockedStatic<AuthenticationController> auth = mockStatic(AuthenticationController.class)) {
+            auth.when(() -> AuthenticationController.isValidSession("user")).thenReturn(true);
+
+            ResponseStatusException denied = assertThrows(ResponseStatusException.class,
+                    () -> controller.incidentPhoto("user", 100L));
+            assertEquals(HttpStatus.NOT_FOUND, denied.getStatusCode());
+        }
     }
 }

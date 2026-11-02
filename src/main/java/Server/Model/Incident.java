@@ -35,7 +35,7 @@ public record Incident(
                 boolean hidden = incident.hideInfo();
                 return new Incident(
                         incident.incidentId(), incident.latitude(), incident.longitude(),
-                        hidden ? null : incident.licensePlate(), incident.imageId(),
+                        hidden ? null : incident.licensePlate(), hidden ? null : incident.imageId(),
                         incident.injurySeverity(), incident.driverPresent(),
                         hidden ? null : incident.driverInformation(), hidden ? null : incident.extraComment(),
                         incident.vehicleMake(), incident.vehicleModel(), incident.vehicleColor(),

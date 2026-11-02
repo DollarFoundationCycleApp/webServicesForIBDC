@@ -171,6 +171,14 @@ public class WebController {
                 .toList();
     }
 
+    // Private fields are masked for everyone but admins
+    private static List<Incident> visibleTo(String session, List<Incident> incidents) {
+        if (AuthenticationController.isAdminSession(session)) {
+            return incidents;
+        }
+        return incidents.stream().map(incident -> Incident.hideInfo(incident)).toList();
+    }
+
     private static Incident findIncident(IncidentData data, String id) {
         return data.incidents().stream()
                 .filter(i -> i.incidentId().equals(id))
@@ -216,7 +224,7 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        model.addAttribute("incidents", newestFirst(loadIncidentData().incidents()));
+        model.addAttribute("incidents", visibleTo(session, newestFirst(loadIncidentData().incidents())));
         return "dashboardView";
     }
 
@@ -235,7 +243,6 @@ public class WebController {
                         fields.put("incidentId", incident.incidentId());
                         fields.put("latitude", incident.latitude());
                         fields.put("longitude", incident.longitude());
-                        fields.put("imageId", incident.imageId());
                         fields.put("injurySeverity", incident.injurySeverity());
                         fields.put("driverPresent", incident.driverPresent());
                         fields.put("vehicleMake", incident.vehicleMake());
@@ -246,6 +253,7 @@ public class WebController {
                         fields.put("hideInfo", incident.hideInfo());
                         
                         if (!incident.hideInfo()) {
+                                fields.put("imageId", incident.imageId());
                                 fields.put("licensePlate", incident.licensePlate());
                                 fields.put("driverInformation", incident.driverInformation());
                                 fields.put("extraComment", incident.extraComment());
@@ -298,7 +306,7 @@ public class WebController {
         boolean canSeePrivate = AuthenticationController.isAdminSession(session);
 
         List<Incident> incidents = newestFirst(data.incidents());
-        model.addAttribute("incidents", incidents);
+        model.addAttribute("incidents", visibleTo(session, incidents));
 
         // Neighbours in the newest-first list drive the picker's step buttons
         int position = incidents.indexOf(incident);
@@ -363,6 +371,12 @@ public class WebController {
                 @PathVariable long id) {
         if (!AuthenticationController.isValidSession(session) || db == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        // Photos of private incidents are only served to admins
+        if (!AuthenticationController.isAdminSession(session)
+                && findIncident(loadIncidentData(), String.valueOf(id)).hideInfo()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         List<Map<String, Object>> photos = db.getIncidentPhotos(id);

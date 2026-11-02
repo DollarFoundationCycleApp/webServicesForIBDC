@@ -1,30 +1,82 @@
 <html xmlns:th="http://www.thymeleaf.org"
-        th:replace="~{viewTemplate :: viewLayout('Incident', 'Incident Details', 'incidents', ~{::content})}">
+        th:replace="~{viewTemplate :: viewLayout('My Incidents', 'Incidents You Reported', 'incidents', ~{::content})}">
 <body>
     <th:block th:fragment="content">
         <!-- Page Specific content-->
 
+        <div class="panel" th:if="${incident == null}">
+            <div class="panel-title">No incidents reported yet</div>
+        </div>
+
+        <th:block th:if="${incident != null}">
+        <form class="incident-picker" th:action="@{/incident}" method="post">
+            <label for="incident-select" class="incident-picker-label">Incident</label>
+            <div class="incident-picker-select">
+                <select id="incident-select" name="id"
+                        onchange="window.location.href = '/incident/' + encodeURIComponent(this.value)">
+                    <option th:each="i : ${incidents}" th:value="${i.incidentId}" th:selected="${i.incidentId == incident.incidentId}"
+                            th:text="'#' + ${i.incidentId} + '  ·  ' + ${#temporals.format(i.createdTime, 'MMM d, yyyy h:mm a')}">#1 · Sep 3, 2026 8:15 AM</option>
+                </select>
+            </div>
+            <noscript><button type="submit" class="incident-picker-button">Go</button></noscript>
+
+            <div class="incident-picker-nav">
+                <a class="incident-picker-button" th:if="${newerIncidentId != null}"
+                        th:href="@{/incident/{id}(id=${newerIncidentId})}" title="Newer incident">&lsaquo; Newer</a>
+                <span class="incident-picker-button disabled" th:if="${newerIncidentId == null}">&lsaquo; Newer</span>
+                <span class="incident-picker-count" th:text="${incidentPosition} + ' of ' + ${#lists.size(incidents)}">1 of 1</span>
+                <a class="incident-picker-button" th:if="${olderIncidentId != null}"
+                        th:href="@{/incident/{id}(id=${olderIncidentId})}" title="Older incident">Older &rsaquo;</a>
+                <span class="incident-picker-button disabled" th:if="${olderIncidentId == null}">Older &rsaquo;</span>
+            </div>
+        </form>
+
+        <div class="incident-detail-row">
+            <div class="panel" th:if="${canSeePrivate or !incident.hideInfo}">
+                <img class="incident-image" th:src="@{/Images/{id}(id=${incident.imageId})}" onerror="this.onerror=null; this.src='/Images/PlaceHolder.jpg'">
+            </div>
             <div class="panel">
-                 <div class="panel-title" th:text="'Incident ' + ${incident.incidentId}">Incident</div>
-                 <table>
-                     <tbody>
-                         <tr><th>Reported</th><td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}"></td></tr>
-                         <tr><th>Location</th><td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}"></td></tr>
-                         <tr><th>Injury Severity</th><td th:text="${incident.injurySeverity}"></td></tr>
-                         <tr><th>Vehicle</th><td th:text="${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}"></td></tr>
-                         <tr><th>Vehicle Color</th><td th:text="${incident.vehicleColor}"></td></tr>
-                         <tr th:if="${!incident.hideInfo}"><th>License Plate</th><td th:text="${incident.licensePlate}"></td></tr>
-                         <tr><th>Driver Present</th><td th:text="${incident.driverPresent} ? 'Yes' : 'No'"></td></tr>
-                         <tr th:if="${!incident.hideInfo}"><th>Driver Information</th><td th:text="${incident.driverInformation} != '' ? ${incident.driverInformation} : 'None'"></td></tr>
-                         <tr th:if="${!incident.hideInfo}"><th>Comment</th><td th:text="${incident.extraComment} != '' ? ${incident.extraComment} : 'No Comment'"></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            <div th:if="${!incident.hideInfo}" class="panel">
-                    <img class="panel" th:src="@{/Images/{id}${(id=incident.imageId)}}" onerror="this.onerror=null; this.src='/Images/PlaceHolder.jpg'"
-                        style="display: block; margin-left: auto; margin-right: auto; width: 70%; height: auto">
-                </div>
-                
+                <div class="panel-title" th:text="'Incident ' + ${incident.incidentId}">Incident</div>
+                <table class="detail-table">
+                    <tbody>
+                        <tr><th>Reported</th><td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}"></td></tr>
+                        <tr><th>Location</th><td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}"></td></tr>
+                        <tr><th>Injury Severity</th><td th:text="${incident.injurySeverity}"></td></tr>
+                        <tr><th>Vehicle</th><td th:text="${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}"></td></tr>
+                        <tr><th>Vehicle Color</th><td th:text="${incident.vehicleColor}"></td></tr>
+                        <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>License Plate</th><td th:text="${incident.licensePlate}"></td></tr>
+                        <tr><th>Driver Present</th><td th:text="${incident.driverPresent} ? 'Yes' : 'No'"></td></tr>
+                        <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Driver Information</th><td th:text="${incident.driverInformation} != '' ? ${incident.driverInformation} : 'None'"></td></tr>
+                        <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Comment</th><td th:text="${incident.extraComment} != '' ? ${incident.extraComment} : 'No Comment'"></td></tr>
+                        <tr th:if="${canSeePrivate}"><th>Private</th><td th:text="${incident.hideInfo} ? 'Yes' : 'No'"></td></tr>
+                        <tr>
+                            <th><label for="additional-comments">Additional Comments</label></th>
+                            <td>
+                                <form th:if="${databaseIncidentIds.contains(incident.incidentId)}"
+                                        th:action="@{/incident/{id}/comments(id=${incident.incidentId})}" method="post">
+                                    <textarea id="additional-comments" class="additional-comments-input" name="additionalComments"
+                                            rows="4" maxlength="5000" th:text="${incident.additionalComments}"></textarea>
+                                    <div class="additional-comments-actions">
+                                        <button type="submit" class="save-comments-button">Save Comments</button>
+                                        <span class="comments-status" th:if="${param.commentsSaved != null and param.commentsSaved[0] == 'true'}">Saved</span>
+                                        <span class="comments-status comments-status-error" th:if="${param.commentsSaved != null and param.commentsSaved[0] != 'true'}">Comments could not be saved</span>
+                                    </div>
+                                </form>
+                                <textarea th:unless="${databaseIncidentIds.contains(incident.incidentId)}" id="additional-comments"
+                                        class="additional-comments-input" rows="2" disabled>Sample incident shown. Comments wont be saved.</textarea>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="panel" th:if="${canSeePrivate and databaseIncidentIds.contains(incident.incidentId)}">
+            <form th:action="@{/incident/{id}/delete(id=${incident.incidentId})}" method="post"
+                    onsubmit="return confirm('Delete incident? This cannot be undone.');">
+                <button type="submit" class="delete-incident-button">Delete Incident</button>
+            </form>
+        </div>
+        </th:block>
 
     </th:block>
 </body>

@@ -171,6 +171,11 @@ public class AuthenticationController {
         return sessionId != null && activeSessions.containsKey(sessionId);
     }
 
+    // placeholder, uses admin view
+    public static boolean isAdminSession(String sessionId) {
+        return sessionId != null && MOCK_USER.equals(activeSessions.get(sessionId));
+    }
+
     public static boolean logout(String sessionId) {
         if (sessionId != null) {
             activeSessions.remove(sessionId);

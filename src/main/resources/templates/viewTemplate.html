@@ -43,8 +43,8 @@
             <div class="profile-row">
                 <image class="icon" th:src="@{/icons/card-account-details.svg}" alt=""></image>
                 <div class="profile-text">
-                    <span class="name">Rob Dollar</span>
-                    <span class="role">Administrator</span>
+                    <span class="name" th:text="${#strings.isEmpty(currentUsername)} ? 'Guest' : ${currentUsername}">Account</span>
+                    <span class="role" th:text="${currentUserIsAdmin} ? 'Administrator' : 'User'">User</span>
                 </div>
             </div>
             <button class="logout-row" id="logout-button" type="button">

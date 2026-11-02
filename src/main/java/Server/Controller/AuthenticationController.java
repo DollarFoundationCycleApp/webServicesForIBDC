@@ -19,7 +19,7 @@ public class AuthenticationController {
     public static final int MIN_PASSWORD_LENGTH = 8;
 
     /** The account a session token belongs to. */
-    public record Session(String userId, boolean isAdmin) {
+    public record Session(String userId, String username, boolean isAdmin) {
     }
 
     public enum RegisterStatus {
@@ -63,13 +63,13 @@ public class AuthenticationController {
                 if (!hashPassword(password).equalsIgnoreCase(storedHash)) {
                     return null;
                 }
-                return createSession(String.valueOf(user.get("user_id")),
+                return createSession(String.valueOf(user.get("user_id")), text(user.get("username_or_email")),
                         Boolean.TRUE.equals(user.get("is_admin")));
             }
         }
 
         if (MOCK_USER.equals(identifier) && MOCK_PASSWORD_HASH.equals(hashPassword(password))) {
-            return createSession(MOCK_USER, true);
+            return createSession(MOCK_USER, MOCK_USER, true);
         }
         return null;
     }
@@ -104,13 +104,13 @@ public class AuthenticationController {
                 if (!normalizedHash.equalsIgnoreCase(storedHash)) {
                     return null;
                 }
-                return createSession(String.valueOf(user.get("user_id")),
+                return createSession(String.valueOf(user.get("user_id")), text(user.get("username_or_email")),
                         Boolean.TRUE.equals(user.get("is_admin")));
             }
         }
 
         if (MOCK_USER.equals(identifier) && MOCK_PASSWORD_HASH.equals(normalizedHash)) {
-            return createSession(MOCK_USER, true);
+            return createSession(MOCK_USER, MOCK_USER, true);
         }
         return null;
     }
@@ -152,13 +152,17 @@ public class AuthenticationController {
             case ERROR -> new RegisterResult(RegisterStatus.UNAVAILABLE, null,
                     "The account could not be saved. Please try again.");
             case CREATED -> new RegisterResult(RegisterStatus.SUCCESS,
-                    createSession(userId, false), "Account created.");
+                    createSession(userId, cleanUsername, false), "Account created.");
         };
     }
 
-    private static String createSession(String userId, boolean isAdmin) {
+    private static String text(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+    private static String createSession(String userId, String username, boolean isAdmin) {
         String sessionId = UUID.randomUUID().toString();
-        activeSessions.put(sessionId, new Session(userId, isAdmin));
+        activeSessions.put(sessionId, new Session(userId, username, isAdmin));
         return sessionId;
     }
 
@@ -171,9 +175,10 @@ public class AuthenticationController {
         return sessionId != null && activeSessions.containsKey(sessionId);
     }
 
-    // placeholder, uses admin view
+    /** True only for sessions that belong to an admin account. */
     public static boolean isAdminSession(String sessionId) {
-        return sessionId != null && MOCK_USER.equals(activeSessions.get(sessionId));
+        Session session = getSession(sessionId);
+        return session != null && session.isAdmin();
     }
 
     public static boolean logout(String sessionId) {

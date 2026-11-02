@@ -21,6 +21,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -137,6 +138,17 @@ public class WebController {
 
     public WebController(DatabaseCommunicationContext db) {
         this.db = db;
+    }
+
+    /**
+     * Make the signed-in account available to every page so the sidebar can
+     * show the username and whether the account is an admin.
+     */
+    @ModelAttribute
+    public void addCurrentUser(@CookieValue(value = "SESSION", required = false) String session, Model model) {
+        AuthenticationController.Session user = AuthenticationController.getSession(session);
+        model.addAttribute("currentUsername", user != null ? user.username() : "");
+        model.addAttribute("currentUserIsAdmin", user != null && user.isAdmin());
     }
 
     /**
@@ -329,15 +341,18 @@ public class WebController {
     }
 
     /**
-     * Save the additional comments of a database incident. Any signed-in user
-     * may edit them. Sample incidents have no row to save to, so they report
-     * a failed save.
+     * Save the additional comments of a database incident. Only admins may
+     * edit them. Sample incidents have no row to save to, so they report a
+     * failed save.
      */
     @PostMapping({"/incident/{id}/comments"})
     public String saveAdditionalComments(@CookieValue(value = "SESSION", required = false) String session,
                 @PathVariable String id, @RequestParam String additionalComments) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
+        }
+        if (!AuthenticationController.isAdminSession(session)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can edit incident notes");
         }
 
         // Browsers send line breaks as \r\n, but maxlength counts them as one character

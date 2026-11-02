@@ -111,6 +111,45 @@ public class WebControllerTest {
         assertNull(db.savedComments);
     }
 
+    /** A signed-in account that is not an admin cannot add notes. */
+    @Test
+    public void nonAdminCannotSaveAdditionalComments() {
+        DatabaseCommunicationContext stub = new DatabaseCommunicationContext("", 0, "", "", "") {
+            @Override
+            public CreateUserResult createUser(String userId, String username, String email,
+                                               String passwordHash, boolean isAdmin) {
+                return CreateUserResult.CREATED;
+            }
+        };
+        String userSession = AuthenticationController.register(
+                stub, "rider", "rider@example.com", "password123", "password123").sessionToken();
+        FakeDatabase db = new FakeDatabase();
+
+        ResponseStatusException denied = assertThrows(ResponseStatusException.class,
+                () -> new WebController(db).saveAdditionalComments(userSession, "100", "text"));
+
+        assertEquals(HttpStatus.FORBIDDEN, denied.getStatusCode());
+        assertNull(db.savedComments);
+    }
+
+    /** The sidebar information is available to every page. */
+    @Test
+    public void profileModelExposesSignedInAccount() {
+        String admin = AuthenticationController.authenticateUser("admin", "password");
+        ExtendedModelMap adminModel = new ExtendedModelMap();
+
+        new WebController(null).addCurrentUser(admin, adminModel);
+
+        assertEquals("admin", adminModel.getAttribute("currentUsername"));
+        assertEquals(Boolean.TRUE, adminModel.getAttribute("currentUserIsAdmin"));
+
+        ExtendedModelMap guestModel = new ExtendedModelMap();
+        new WebController(null).addCurrentUser(null, guestModel);
+
+        assertEquals("", guestModel.getAttribute("currentUsername"));
+        assertEquals(Boolean.FALSE, guestModel.getAttribute("currentUserIsAdmin"));
+    }
+
     @Test
     public void privateIncidentsStillShowAdditionalComments() {
         Incident incident = new Incident("1", 0, 0, "PLATE", "img", "None", false, "driver", "comment",

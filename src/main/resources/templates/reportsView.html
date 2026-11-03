@@ -4,73 +4,84 @@
     <th:block th:fragment="content">
         <!-- Page Specific content-->
 
-        <form class="keyword-filter" th:action="@{/reports}" method="post">
-            <input type="hidden" name="limit" th:value="${limit}">
-            <div class="keyword-filter-wrap">
-                <input type="text" id="keyword" name="keyword" th:value="${keyword}"
-                    placeholder="Search by location or keyword" autocomplete="off">
-                <button type="submit" aria-label="Search">
-                    <img class="icon" th:src="@{/icons/magnify.svg}" alt="">
-                </button>
-            </div>
-        </form>
+        <div class="filter-row">
+            <form th:action="@{/reports}" method="post">
+                <input type="hidden" name="limit" th:value="${limit}">
+                <div class="keyword-filter-wrap">
+                    <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                        placeholder="Search by location or keyword" autocomplete="off">
+                    <button type="submit" aria-label="Search">
+                        <img class="icon" th:src="@{/icons/magnify.svg}" alt="">
+                    </button>
+                </div>
+            </form>
+    
+            <form th:action="@{/reports}" method="post">
+                <input type="hidden" name="limit" th:value="${limit}">
+                <button class="reset-button" type="submit" aria-label="Reset">
+                    <img class="icon" th:src="@{/icons/refresh.svg}" alt="">
+                    Reset</button>
+            </form>
+        </div>
 
-        <div class="panel" style="width: 1500px;">
-            <table class="reports-table">
-                <colgroup>
-                    <col style="width: 44px;">
-                    <col style="width: 13%;">
-                    <col style="width: 15%;">
-                    <col style="width: 15%;">
-                    <col style="width: 24%;">
-                    <col style="width: 13%;">
-                    <col style="width: 8%;">
-                    <col>
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="all-incidents"></th>
-                        <th>Incident ID</th>
-                        <th>Date</th>
-                        <th>Location</th>
-                        <th>Vehicle</th>
-                        <th>License Plate</th>
-                        <th>Driver</th>
-                        <th>Image Preview</th>
+        <div class="panel-row">
+            <div class="panel">
+                <table class="reports-table">
+                    <colgroup>
+                        <col style="width: 44px;">
+                        <col style="width: 13%;">
+                        <col style="width: 15%;">
+                        <col style="width: 15%;">
+                        <col style="width: 24%;">
+                        <col style="width: 13%;">
+                        <col style="width: 8%;">
+                        <col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="all-incidents"></th>
+                            <th>Incident ID</th>
+                            <th>Date</th>
+                            <th>Location</th>
+                            <th>Vehicle</th>
+                            <th>License Plate</th>
+                            <th>Driver</th>
+                            <th>Image Preview</th>
+                        </tr>
+                    </thead>
+                    <tr th:if="${#lists.isEmpty(incidents)}">
+                        <td colspan="8">No incidents match your search.</td>
                     </tr>
-                </thead>
-                <tr th:if="${#lists.isEmpty(incidents)}">
-                    <td colspan="8">No incidents match your search.</td>
-                </tr>
-                <tr class="incident-row" th:each="incident : ${incidents}">
-                    <td><input type="checkbox"></td>
-                    <td>
-                        <a class="incident-link" th:href="@{/incident/{id}(id=${incident.incidentId})}"
-                        th:text="${incident.incidentId}">N/A</a>
-                    </td>
-                    <td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}">N/A</td>
-                    <td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}">N/A</td>
-                    <td th:text="${incident.vehicleColor} + ' ' + ${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}">N/A</td>
-                    <td th:text="${incident.licensePlate}">N/A</td>
-                    <td th:text="${incident.driverPresent} ? 'Yes' : 'No'">No</td>
-                    <td><span class="preview-placeholder"></span></td>
-                </tr>
-            </table>
+                    <tr class="incident-row" th:each="incident : ${incidents}">
+                        <td><input type="checkbox"></td>
+                        <td>
+                            <a class="incident-link" th:href="@{/incident/{id}(id=${incident.incidentId})}"
+                            th:text="${incident.incidentId}">N/A</a>
+                        </td>
+                        <td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}">N/A</td>
+                        <td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}">N/A</td>
+                        <td th:text="${incident.vehicleColor} + ' ' + ${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}">N/A</td>
+                        <td th:text="${incident.licensePlate}">N/A</td>
+                        <td th:text="${incident.driverPresent} ? 'Yes' : 'No'">No</td>
+                        <td><span class="preview-placeholder"></span></td>
+                    </tr>
+                </table>
 
-            <nav class="page-selector" th:if="${totalPages gt 1}">
-                <a class="page-button" th:classappend="${currentPage == 1} ? 'disabled'"
-                th:href="@{/reports(pageNum=${currentPage - 1}, limit=${limit})}">&laquo;</a>
-    
-                <th:block th:each="p : ${pageButtons}">
-                    <span class="page-button ellipsis" th:if="${p == -1}">...</span>
-                    <a class="page-button" th:unless="${p == -1}"
-                    th:classappend="${p == currentPage} ? 'active'"
-                    th:href="@{/reports(pageNum=${p}, limit=${limit})}" th:text="${p}">1</a>
-                </th:block>
-    
-                <a class="page-button" th:classappend="${currentPage == totalPages} ? 'disabled'"
-                th:href="@{/reports(pageNum=${currentPage + 1}, limit=${limit})}">&raquo;</a>
-            </nav>
+                <nav class="page-selector" th:if="${totalPages gt 1}">
+                    <a class="page-button" th:classappend="${currentPage == 1} ? 'disabled'"
+                    th:href="@{/reports(pageNum=${currentPage - 1}, limit=${limit})}">&laquo;</a>
+        
+                    <th:block th:each="p : ${pageButtons}">
+                        <span class="page-button ellipsis" th:if="${p == -1}">...</span>
+                        <a class="page-button" th:unless="${p == -1}"
+                        th:classappend="${p == currentPage} ? 'active'"
+                        th:href="@{/reports(pageNum=${p}, limit=${limit})}" th:text="${p}">1</a>
+                    </th:block>
+        
+                    <a class="page-button" th:classappend="${currentPage == totalPages} ? 'disabled'"
+                    th:href="@{/reports(pageNum=${currentPage + 1}, limit=${limit})}">&raquo;</a>
+                </nav>
+            </div>
         </div>
 
         <script>

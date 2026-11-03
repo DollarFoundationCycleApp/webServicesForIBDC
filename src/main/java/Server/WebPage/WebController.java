@@ -376,14 +376,14 @@ public class WebController {
         }
     
         httpSession.setAttribute("keyword", keyword.trim());
-        return "redirect:/reports"; 
+        return "redirect:/reports?limit=" + limit; 
     }
 
     @GetMapping({"/reports"})
     public String reports(@CookieValue(value = "SESSION", required = false) String session, 
                         @RequestParam(defaultValue = "1") int pageNum, 
                         @RequestParam(defaultValue = "10") int limit, 
-                        HttpSession httpSession,Model model) { 
+                        HttpSession httpSession, Model model) { 
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }

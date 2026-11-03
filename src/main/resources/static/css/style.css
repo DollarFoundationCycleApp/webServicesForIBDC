@@ -492,9 +492,13 @@ th {
     background-color: #a82520;
 }
 
-.keyword-filter {
-    margin-bottom: 16px;
-    font-size: 0.85rem;
+/* Row for reports filters */
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
 }
 
 /* Reports Search Filter*/
@@ -502,10 +506,8 @@ th {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 30%;
-    margin-top: 25px;
-    max-width: 100%;
-    padding: 0 12px;
+    width: 500px;
+    padding: 6px 12px;
     border: 1px solid #d8d8d8;
     border-radius: 4px;
     background-color: #ffffff;
@@ -518,12 +520,38 @@ th {
 .keyword-filter-wrap input {
     flex: 1;
     min-width: 0;
-    padding: 8px 0;
     border: none;
     outline: none;
     background: transparent;
     font-size: 0.85rem;
     color: #333333;
+}
+
+.keyword-filter-wrap button {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+/* Reports Reset button*/
+.reset-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    background-color: #ffffff;
+    font-size: 0.85rem;
+    color: #333333;
+    cursor: pointer;
+}
+
+.reset-button:hover {
+    border-color: #ff6600;
 }
 
 /* Reports table */

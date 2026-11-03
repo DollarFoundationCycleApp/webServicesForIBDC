@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     distance_cm INT UNSIGNED,                       -- Distance to object from embedded sensor
     time_offset_ms INT UNSIGNED,                    -- Sensor offset time in ms
     is_anonymized TINYINT(1) DEFAULT 0 NOT NULL,    -- Flag denoting sensitive info stripping
+    additional_comments TEXT,                       -- Free text any signed-in user can edit on /incident
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_device_event_id (device_event_id),

@@ -31,32 +31,50 @@
             </div>
         </form>
 
-        <div class="panel">
-            <div class="panel-title" th:text="'Incident ' + ${incident.incidentId}">Incident</div>
-            <table class="detail-table">
-                <tbody>
-                    <tr><th>Reported</th><td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}"></td></tr>
-                    <tr><th>Location</th><td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}"></td></tr>
-                    <tr><th>Injury Severity</th><td th:text="${incident.injurySeverity}"></td></tr>
-                    <tr><th>Vehicle</th><td th:text="${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}"></td></tr>
-                    <tr><th>Vehicle Color</th><td th:text="${incident.vehicleColor}"></td></tr>
-                    <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>License Plate</th><td th:text="${incident.licensePlate}"></td></tr>
-                    <tr><th>Driver Present</th><td th:text="${incident.driverPresent} ? 'Yes' : 'No'"></td></tr>
-                    <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Driver Information</th><td th:text="${incident.driverInformation} != '' ? ${incident.driverInformation} : 'None'"></td></tr>
-                    <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Comment</th><td th:text="${incident.extraComment} != '' ? ${incident.extraComment} : 'No Comment'"></td></tr>
-                    <tr th:if="${canSeePrivate}"><th>Private</th><td th:text="${incident.hideInfo} ? 'Yes' : 'No'"></td></tr>
-                </tbody>
-            </table>
+        <div class="incident-detail-row">
+            <div class="panel" th:if="${canSeePrivate or !incident.hideInfo}">
+                <img class="incident-image" th:src="@{/Images/{id}(id=${incident.imageId})}" onerror="this.onerror=null; this.src='/Images/PlaceHolder.jpg'">
+            </div>
+            <div class="panel">
+                <div class="panel-title" th:text="'Incident ' + ${incident.incidentId}">Incident</div>
+                <table class="detail-table">
+                    <tbody>
+                        <tr><th>Reported</th><td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}"></td></tr>
+                        <tr><th>Location</th><td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}"></td></tr>
+                        <tr><th>Injury Severity</th><td th:text="${incident.injurySeverity}"></td></tr>
+                        <tr><th>Vehicle</th><td th:text="${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}"></td></tr>
+                        <tr><th>Vehicle Color</th><td th:text="${incident.vehicleColor}"></td></tr>
+                        <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>License Plate</th><td th:text="${incident.licensePlate}"></td></tr>
+                        <tr><th>Driver Present</th><td th:text="${incident.driverPresent} ? 'Yes' : 'No'"></td></tr>
+                        <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Driver Information</th><td th:text="${incident.driverInformation} != '' ? ${incident.driverInformation} : 'None'"></td></tr>
+                        <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Comment</th><td th:text="${incident.extraComment} != '' ? ${incident.extraComment} : 'No Comment'"></td></tr>
+                        <tr th:if="${canSeePrivate}"><th>Private</th><td th:text="${incident.hideInfo} ? 'Yes' : 'No'"></td></tr>
+                        <tr>
+                            <th><label for="additional-comments">Additional Comments</label></th>
+                            <td>
+                                <form th:if="${databaseIncidentIds.contains(incident.incidentId)}"
+                                        th:action="@{/incident/{id}/comments(id=${incident.incidentId})}" method="post">
+                                    <textarea id="additional-comments" class="additional-comments-input" name="additionalComments"
+                                            rows="4" maxlength="5000" th:text="${incident.additionalComments}"></textarea>
+                                    <div class="additional-comments-actions">
+                                        <button type="submit" class="save-comments-button">Save Comments</button>
+                                        <span class="comments-status" th:if="${param.commentsSaved != null and param.commentsSaved[0] == 'true'}">Saved</span>
+                                        <span class="comments-status comments-status-error" th:if="${param.commentsSaved != null and param.commentsSaved[0] != 'true'}">Comments could not be saved</span>
+                                    </div>
+                                </form>
+                                <textarea th:unless="${databaseIncidentIds.contains(incident.incidentId)}" id="additional-comments"
+                                        class="additional-comments-input" rows="2" disabled>Sample incident shown. Comments wont be saved.</textarea>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div class="panel" th:if="${canSeePrivate and databaseIncidentIds.contains(incident.incidentId)}">
             <form th:action="@{/incident/{id}/delete(id=${incident.incidentId})}" method="post"
                     onsubmit="return confirm('Delete incident? This cannot be undone.');">
                 <button type="submit" class="delete-incident-button">Delete Incident</button>
             </form>
-        </div>
-        <div class="panel" th:if="${canSeePrivate or !incident.hideInfo}">
-            <img class="panel" th:src="@{/Images/{id}(id=${incident.imageId})}" onerror="this.onerror=null; this.src='/Images/PlaceHolder.jpg'"
-                style="display: block; margin-left: auto; margin-right: auto; width: 70%; height: auto">
         </div>
         </th:block>
 

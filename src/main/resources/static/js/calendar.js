@@ -6,9 +6,9 @@
     var rangeText = document.getElementById('date-range-text');
     var shownMonth = new Date();
     shownMonth.setDate(1);
-    // Matches the range shown in the header before anything is picked
-    var startDate = new Date(2026, 8, 1);
-    var stopDate = new Date(2026, 8, 30);
+    // Default range is the whole current month
+    var startDate = new Date(shownMonth.getFullYear(), shownMonth.getMonth(), 1);
+    var stopDate = new Date(shownMonth.getFullYear(), shownMonth.getMonth() + 1, 0);
 
     // Lets pages react to a completed range; stopDate is inclusive
     function announceRange() {
@@ -123,5 +123,6 @@
         }
     });
 
+    rangeText.textContent = formatDate(startDate) + ' - ' + formatDate(stopDate);
     announceRange();
 })();

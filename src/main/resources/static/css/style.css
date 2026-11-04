@@ -554,7 +554,7 @@ th {
 }
 
 /* Row for reports filters */
-.filter-row {
+.filter-items {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -628,7 +628,6 @@ th {
     bottom: auto;
     margin: 0;
     width: 300px;
-    height: 400px;
     background-color: #ffffff;
     border: 1px solid #d8d8d8;
     border-radius: 4px;
@@ -640,7 +639,6 @@ th {
 .filter-menu {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
 }
 
 .filter-menu .full {
@@ -670,14 +668,36 @@ th {
     background-color: #f0f0f0;
 }
 
-.filter-actions {
+.filter-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-.filter-actions .reset-button,
-.filter-actions .apply-filters-button {
+.filter-row label {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #333333;
+}
+
+.filter-row select {
+    width: 100%;
+    height: 36px;
+    margin-bottom: 12px;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    background-color: #ffffff;
+    font-size: 0.85rem;
+    color: #222222;
+}
+
+.filter-row select:hover {
+    border-color: #ff6600;
+    cursor: pointer;
+}
+
+
+.filter-row button {
     justify-content: center;
     height: 38px;
 }

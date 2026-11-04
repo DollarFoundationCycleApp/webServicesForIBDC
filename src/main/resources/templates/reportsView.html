@@ -4,7 +4,7 @@
     <th:block th:fragment="content">
         <!-- Page Specific content-->
 
-        <div class="filter-row">
+        <div class="filter-items">
             <form th:action="@{/reports}" method="post">
                 <input type="hidden" name="limit" th:value="${limit}">
                 <div class="keyword-filter-wrap">
@@ -31,8 +31,24 @@
                 <form class="filter-menu" th:action="@{/reports}" method="post">
                     <input type="hidden" name="limit" th:value="${limit}">
                     <input type="hidden" name="keyword" th:value="${keyword}">
-                    
-                    <div class="filter-actions full">
+
+                    <div class="filter-row full">
+                        <label>Vehicle Make</label>
+                        <label>Vehicle Model</label>
+                    </div>
+
+                    <div class="filter-row full">
+                        <select name="vehicleMake" th:value="${vehicleMake}">
+                            <option value="">All</option>
+                            <option th:each="make : ${vehicleMakes}" th:value="${make}" th:text="${make}"
+                                th:selected="${make == vehicleMake}"></option>
+                        </select>
+                        <select name="vehicleModel" th:value="${vehicleModel}" th:disabled="${vehicleMake == null or vehicleMake == ''}">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-row full">
                         <button form="reset-filters" class="reset-button" type="submit" aria-label="Reset">
                             <img class="icon" th:src="@{/icons/refresh.svg}" alt="">
                             Reset

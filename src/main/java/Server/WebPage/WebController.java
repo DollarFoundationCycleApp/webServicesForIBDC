@@ -91,7 +91,7 @@ public class WebController {
                     LocalDateTime.of(2026, 9, 11, 7, 35), false),
             new Incident("10", 33.4935, -111.9195, "XYZ9876", "img-0002", "Moderate",
                     false, "", "Driver left the scene heading north",
-                    "Ford", "F-150", "Black", 2021,
+                    "FORD", "F-150", "Black", 2021,
                     LocalDateTime.of(2026, 9, 12, 17, 42), false),
             new Incident("11", 33.4309, -111.9410, "TMP1005", "img-0008", "None",
                     true, "Priya Patel, 480-555-0145", "Driver honked and swerved toward rider",
@@ -138,6 +138,12 @@ public class WebController {
 
     public WebController(DatabaseCommunicationContext db) {
         this.db = db;
+
+        // Load sample vehicle makes and models into the database
+        for (Incident sample : SAMPLE_INCIDENTS) {
+            db.storeVehicleMake(sample.vehicleMake());
+            db.storeVehicleModel(sample.vehicleMake(), sample.vehicleModel());
+        }
     }
 
     /**
@@ -411,12 +417,16 @@ public class WebController {
     public String searchReports(@CookieValue(value = "SESSION", required = false) String session,
                     @RequestParam(defaultValue = "") String keyword,
                     @RequestParam(defaultValue = "10") int limit,
+                    @RequestParam (defaultValue = "") String vehicleMake,
+                    @RequestParam (defaultValue = "") String vehicleModel,
                     HttpSession httpSession) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
     
         httpSession.setAttribute("keyword", keyword.trim());
+        httpSession.setAttribute("vehicleMake", vehicleMake.trim());
+        httpSession.setAttribute("vehicleModel", vehicleModel.trim());
         return "redirect:/reports?limit=" + limit; 
     }
 
@@ -432,9 +442,14 @@ public class WebController {
 
 
         String keyword = (String) httpSession.getAttribute("keyword");
+        String vehicleMake = (String) httpSession.getAttribute("vehicleMake");
+        String vehicleModel = (String) httpSession.getAttribute("vehicleModel");
+
+        System.out.println(vehicleMake + " " + vehicleModel);
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> keywordFilter(incident, keyword))
+                .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
@@ -447,8 +462,10 @@ public class WebController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("currentPage", Math.min(pageNum, totalPages));
         model.addAttribute("pageButtons", pageButtons(Math.min(pageNum, totalPages), totalPages));
+        model.addAttribute("vehicleMakes", db.getAllVehicleMakes());
         model.addAttribute("keyword", keyword);
-
+        model.addAttribute("vehicleMake", vehicleMake);
+        model.addAttribute("vehicleModel", vehicleModel);
         return "reportsView"; 
     }
 
@@ -461,6 +478,15 @@ public class WebController {
                 incident.driverInformation().toLowerCase().contains(lowerKeyword) ||
                 incident.extraComment().toLowerCase().contains(lowerKeyword) ||
                 incident.additionalComments().toLowerCase().contains(lowerKeyword);
+    }
+
+    private static boolean vehicleFilter(Incident incident, String vehicleMake, String vehicleModel) {
+        if ((vehicleMake == null || vehicleMake.isEmpty()) && (vehicleModel == null || vehicleModel.isEmpty())) {
+            return true;
+        }
+        boolean makeMatches = vehicleMake == null || vehicleMake.isEmpty() || incident.vehicleMake().toLowerCase().contains(vehicleMake.toLowerCase());
+        boolean modelMatches = vehicleModel == null || vehicleModel.isEmpty() || incident.vehicleModel().toLowerCase().contains(vehicleModel.toLowerCase());
+        return makeMatches && modelMatches;
     }
 
     /**

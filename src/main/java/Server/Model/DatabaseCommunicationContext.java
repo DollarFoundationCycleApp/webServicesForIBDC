@@ -208,7 +208,7 @@ public class DatabaseCommunicationContext {
     public List<Map<String, Object>> getAllIncidents(int limit, int offset) {
         List<Map<String, Object>> incidents = new ArrayList<>();
 
-        String sql = "SELECT i.incident_id, i.device_event_id, i.timestamp_ms, i.latitude, "
+        String sql = "SELECT i.incident_id, i.user_id, i.device_event_id, i.timestamp_ms, i.latitude, "
                 + "i.longitude, i.accuracy_meters, i.distance_cm, i.time_offset_ms, i.is_anonymized, "
                 + "i.additional_comments, v.license_plate, v.state_or_region, v.vehicle_make, v.vehicle_model, v.vehicle_color "
                 + "FROM incidents i "
@@ -225,6 +225,7 @@ public class DatabaseCommunicationContext {
                 while (rs.next()) {
                     Map<String, Object> incident = new HashMap<>();
                     incident.put("incident_id", rs.getLong("incident_id"));
+                    incident.put("user_id", rs.getString("user_id"));
                     incident.put("device_event_id", rs.getInt("device_event_id"));
                     incident.put("timestamp_ms", rs.getLong("timestamp_ms"));
                     incident.put("latitude", rs.getDouble("latitude"));

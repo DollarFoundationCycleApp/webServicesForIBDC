@@ -16,7 +16,7 @@
                 <span>IBDC Server</span>
             </div>
             <nav class="nav-list">
-                <a class="nav-row" th:classappend="${active == 'dashboard'} ? 'selected'" th:href="@{/dashboard}">
+                <a class="nav-row" th:if="${currentUserIsAdmin}" th:classappend="${active == 'dashboard'} ? 'selected'" th:href="@{/dashboard}">
                     <image class="icon" th:src="@{/icons/home.svg}" alt=""></image>
                     <span>Dashboard</span>
                 </a>
@@ -24,7 +24,7 @@
                     <image class="icon" th:src="@{/icons/map.svg}" alt=""></image>
                     <span>Heatmap</span>
                 </a>
-                <a class="nav-row" th:classappend="${active == 'reports'} ? 'selected'" th:href="@{/reports}">
+                <a class="nav-row" th:if="${currentUserIsAdmin}" th:classappend="${active == 'reports'} ? 'selected'" th:href="@{/reports}">
                     <image class="icon" th:src="@{/icons/view-list.svg}" alt=""></image>
                     <span>Reports</span>
                 </a>

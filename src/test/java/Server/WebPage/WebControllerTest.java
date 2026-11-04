@@ -39,25 +39,35 @@ public class WebControllerTest {
         assertTrue(model.containsAttribute("incidents"));
     }
 
-    /** Records comment saves and reports one database incident, id 100. */
+    /** Records comment saves and serves three owned database incidents. */
     private static class FakeDatabase extends DatabaseCommunicationContext {
-        long savedId;
+        long savedId = -1;
         String savedComments;
+        long deletedId = -1;
 
         FakeDatabase() {
             super("", 0, "", "", "");
         }
 
-        @Override
-        public List<Map<String, Object>> getAllIncidents(int limit, int offset) {
+        static Map<String, Object> row(long incidentId, String ownerId, boolean anonymized, long timestampMs) {
             Map<String, Object> row = new HashMap<>();
-            row.put("incident_id", 100L);
-            row.put("timestamp_ms", 0L);
+            row.put("incident_id", incidentId);
+            row.put("user_id", ownerId);
+            row.put("timestamp_ms", timestampMs);
             row.put("latitude", 33.0);
             row.put("longitude", -111.0);
-            row.put("is_anonymized", true);
+            row.put("is_anonymized", anonymized);
             row.put("additional_comments", "stored text");
-            return List.of(row);
+            return row;
+        }
+
+        /** 100 and 300 belong to user-1, 200 belongs to user-2. 100 is private. */
+        @Override
+        public List<Map<String, Object>> getAllIncidents(int limit, int offset) {
+            return List.of(
+                    row(100L, "user-1", true, 1_000L),
+                    row(200L, "user-2", false, 2_000L),
+                    row(300L, "user-1", false, 3_000L));
         }
 
         @Override
@@ -74,6 +84,22 @@ public class WebControllerTest {
             savedComments = additionalComments;
             return true;
         }
+
+        @Override
+        public boolean deleteIncident(long incidentId) {
+            deletedId = incidentId;
+            return true;
+        }
+    }
+
+    /** Pretend a session token belongs to the given account. */
+    private static MockedStatic<AuthenticationController> asUser(String token, String userId, boolean admin) {
+        MockedStatic<AuthenticationController> auth = mockStatic(AuthenticationController.class);
+        auth.when(() -> AuthenticationController.isValidSession(token)).thenReturn(true);
+        auth.when(() -> AuthenticationController.getSession(token))
+                .thenReturn(new AuthenticationController.Session(userId, "account", admin));
+        auth.when(() -> AuthenticationController.isAdminSession(token)).thenReturn(admin);
+        return auth;
     }
 
     @Test
@@ -193,33 +219,144 @@ public class WebControllerTest {
         assertFalse(incident.containsKey("imageId"));
     }
 
+    /**
+     * A regular account only sees incidents it reported; admin-only pages
+     * become a redirect to My Incidents.
+     */
     @Test
     @SuppressWarnings("unchecked")
-    public void nonAdminPagesReceiveNoPrivateData() {
-        try (MockedStatic<AuthenticationController> auth = mockStatic(AuthenticationController.class)) {
-            auth.when(() -> AuthenticationController.isValidSession("user")).thenReturn(true);
-            WebController controller = new WebController(null);
+    public void nonAdminOnlySeesOwnIncidentsAndIsBlockedFromAdminPages() {
+        WebController controller = new WebController(new FakeDatabase());
 
-            ExtendedModelMap dashboard = new ExtendedModelMap();
-            controller.dashboard("user", dashboard);
-            assertPrivateIncidentMasked((List<Incident>) dashboard.getAttribute("incidents"));
-
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
             ExtendedModelMap incidentPage = new ExtendedModelMap();
-            controller.incident("user", "3", incidentPage);
-            assertPrivateIncidentMasked((List<Incident>) incidentPage.getAttribute("incidents"));
-            assertNull(((Incident) incidentPage.getAttribute("incident")).licensePlate());
+            assertEquals("incidentView", controller.incident("user", "300", incidentPage));
+
+            List<Incident> picker = (List<Incident>) incidentPage.getAttribute("incidents");
+            assertEquals(List.of("300", "100"), picker.stream().map(Incident::incidentId).toList());
+
+            assertEquals("redirect:/incident", controller.dashboard("user", new ExtendedModelMap()));
+            assertEquals("redirect:/incident", controller.reports("user"));
         }
     }
 
-    private static void assertPrivateIncidentMasked(List<Incident> incidents) {
-        Incident incident = incidents.stream()
-                .filter(i -> i.incidentId().equals("3"))
+    /** Typing another account's incident id, or a sample id, sends them back. */
+    @Test
+    public void nonAdminIsRedirectedAwayFromIncidentsTheyCannotSee() {
+        WebController controller = new WebController(new FakeDatabase());
+
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
+            assertEquals("redirect:/incident",
+                    controller.incident("user", "200", new ExtendedModelMap()));
+
+            assertEquals("redirect:/incident",
+                    controller.incident("user", "3", new ExtendedModelMap()));
+        }
+    }
+
+    @Test
+    public void nonAdminPickerCannotJumpToAnotherUsersIncident() {
+        WebController controller = new WebController(new FakeDatabase());
+
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
+            assertEquals("redirect:/incident/300", controller.pickIncident("user", "300"));
+            assertEquals("redirect:/incident", controller.pickIncident("user", "200"));
+        }
+    }
+
+    @Test
+    public void nonAdminWithNoOwnIncidentsSeesEmptyState() {
+        WebController controller = new WebController(new FakeDatabase());
+
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-9", false)) {
+            ExtendedModelMap model = new ExtendedModelMap();
+
+            assertEquals("incidentView", controller.incidents("user", model));
+            assertEquals(List.of(), model.getAttribute("incidents"));
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void adminStillSeesEveryIncidentAndAdminPages() {
+        String admin = AuthenticationController.authenticateUser("admin", "password");
+        WebController controller = new WebController(new FakeDatabase());
+
+        ExtendedModelMap page = new ExtendedModelMap();
+        assertEquals("incidentView", controller.incident(admin, "200", page));
+
+        List<Incident> picker = (List<Incident>) page.getAttribute("incidents");
+        assertTrue(picker.stream().anyMatch(i -> i.incidentId().equals("300")));
+        assertTrue(picker.stream().anyMatch(i -> i.incidentId().equals("200")));
+
+        assertEquals("dashboardView", controller.dashboard(admin, new ExtendedModelMap()));
+        assertEquals("reportsView", controller.reports(admin));
+    }
+
+    /** Each pin is clickable only for incidents the account may open. */
+    @Test
+    public void heatmapLinksOnlyIncidentsTheAccountCanOpen() {
+        WebController controller = new WebController(new FakeDatabase());
+
+        // Admin: every pin links to its detail page.
+        ExtendedModelMap adminModel = new ExtendedModelMap();
+        controller.heatmap(AuthenticationController.authenticateUser("admin", "password"), adminModel);
+        assertEquals(Boolean.TRUE, heatmapIncident(adminModel, "100").get("canViewDetails"));
+        assertEquals(Boolean.TRUE, heatmapIncident(adminModel, "20").get("canViewDetails"));
+
+        // Regular account: own reports link; samples and other accounts' pins do not.
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
+            ExtendedModelMap userModel = new ExtendedModelMap();
+            controller.heatmap("user", userModel);
+            assertEquals(Boolean.TRUE, heatmapIncident(userModel, "100").get("canViewDetails"));
+            assertEquals(Boolean.TRUE, heatmapIncident(userModel, "300").get("canViewDetails"));
+            assertEquals(Boolean.FALSE, heatmapIncident(userModel, "200").get("canViewDetails"));
+            assertEquals(Boolean.FALSE, heatmapIncident(userModel, "20").get("canViewDetails"));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> heatmapIncident(ExtendedModelMap model, String incidentId) {
+        return ((List<Map<String, Object>>) model.getAttribute("incidents")).stream()
+                .filter(fields -> incidentId.equals(fields.get("incidentId")))
                 .findFirst()
                 .orElseThrow();
-        assertNull(incident.licensePlate());
-        assertNull(incident.driverInformation());
-        assertNull(incident.extraComment());
-        assertNull(incident.imageId());
+    }
+
+    /** Owners may delete their own reports; other accounts get 404. */
+    @Test
+    public void usersCanDeleteOnlyTheirOwnIncidents() {
+        FakeDatabase db = new FakeDatabase();
+        WebController controller = new WebController(db);
+
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
+            assertEquals("redirect:/incident", controller.deleteIncident("user", "300"));
+            assertEquals(300L, db.deletedId);
+
+            db.deletedId = -1;
+            assertEquals("redirect:/incident", controller.deleteIncident("user", "200"));
+            assertEquals(-1L, db.deletedId);
+        }
+
+        assertEquals("redirect:/login", controller.deleteIncident(null, "300"));
+    }
+
+    /** Photos follow the same ownership rule, plus private masking. */
+    @Test
+    public void usersCanOnlyFetchPhotosOfTheirOwnNonPrivateIncidents() {
+        WebController controller = new WebController(new FakeDatabase());
+
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
+            assertEquals(HttpStatus.OK, controller.incidentPhoto("user", 300L).getStatusCode());
+
+            ResponseStatusException another = assertThrows(ResponseStatusException.class,
+                    () -> controller.incidentPhoto("user", 200L));
+            assertEquals(HttpStatus.NOT_FOUND, another.getStatusCode());
+
+            ResponseStatusException ownPrivate = assertThrows(ResponseStatusException.class,
+                    () -> controller.incidentPhoto("user", 100L));
+            assertEquals(HttpStatus.NOT_FOUND, ownPrivate.getStatusCode());
+        }
     }
 
     /** Incident 100 in the fake database is private and has a photo. */

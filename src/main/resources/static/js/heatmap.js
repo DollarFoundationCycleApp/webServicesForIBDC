@@ -101,13 +101,18 @@
         return content;
     }
 
-    // Pin each incident, shown only when zoomed in to street level. Clicking a pin opens its popup.
+    // Pin each incident, shown only when zoomed in to street level.
+    // Only incidents the signed-in account may open get a popup.
     var pinMinZoom = 16;
     var pinsShown = false;
     var incidentMarkers = incidents.map(function (incident, index) {
-        var popup = new maplibregl.Popup({ className: 'incident-popup', offset: 25, maxWidth: '280px' })
-            .setDOMContent(incidentPopupContent(incident));
-        return new maplibregl.Marker().setLngLat(incidentLocations[index]).setPopup(popup);
+        var marker = new maplibregl.Marker().setLngLat(incidentLocations[index]);
+        if (incident.canViewDetails) {
+            var popup = new maplibregl.Popup({ className: 'incident-popup', offset: 25, maxWidth: '280px' })
+                .setDOMContent(incidentPopupContent(incident));
+            marker.setPopup(popup);
+        }
+        return marker;
     });
 
     function updatePins() {

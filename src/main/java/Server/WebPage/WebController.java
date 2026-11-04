@@ -159,6 +159,7 @@ public class WebController {
      */
     private IncidentData loadIncidentData() {
         Map<String, Incident> merged = new LinkedHashMap<>();
+        Map<String, String> owners = new HashMap<>();
         for (Incident sample : SAMPLE_INCIDENTS) {
             merged.put(sample.incidentId(), sample);
         }
@@ -169,12 +170,44 @@ public class WebController {
                 Incident incident = toIncident(row);
                 merged.put(incident.incidentId(), incident);
                 databaseIds.add(incident.incidentId());
+                if (row.get("user_id") != null) {
+                    owners.put(incident.incidentId(), row.get("user_id").toString());
+                }
             }
         }
-        return new IncidentData(new ArrayList<>(merged.values()), databaseIds);
+        return new IncidentData(new ArrayList<>(merged.values()), databaseIds, owners);
     }
 
-    private record IncidentData(List<Incident> incidents, Set<String> databaseIds) {
+    private record IncidentData(List<Incident> incidents, Set<String> databaseIds,
+                                Map<String, String> owners) {
+    }
+
+    /**
+     * The incidents an account is allowed to browse: admins see everything,
+     * everyone else sees only the incidents they reported. Sample incidents
+     * have no owner, so they stay admin-only. Newest first.
+     */
+    private static List<Incident> reportedBy(String session, IncidentData data) {
+        AuthenticationController.Session user = AuthenticationController.getSession(session);
+        if (user == null) {
+            return List.of();
+        }
+        if (user.isAdmin()) {
+            return newestFirst(data.incidents());
+        }
+
+        String userId = user.userId();
+        return newestFirst(data.incidents().stream()
+                .filter(incident -> userId != null && userId.equals(data.owners().get(incident.incidentId())))
+                .toList());
+    }
+
+    /** Look up an incident the account is allowed to see, or fail with 404. */
+    private static Incident findVisibleIncident(String session, IncidentData data, String id) {
+        return reportedBy(session, data).stream()
+                .filter(incident -> incident.incidentId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     private static List<Incident> newestFirst(List<Incident> incidents) {
@@ -227,14 +260,14 @@ public class WebController {
     @GetMapping({"/", "/login"})
     public String login(@CookieValue(value = "SESSION", required = false) String session) {
         if (AuthenticationController.isValidSession(session)) {
-            return "redirect:/dashboard";
+            return AuthenticationController.isAdminSession(session) ? "redirect:/dashboard" : "redirect:/incident";
         }
         return "loginView"; }
 
     @GetMapping({"/register"})
     public String register(@CookieValue(value = "SESSION", required = false) String session) {
         if (AuthenticationController.isValidSession(session)) {
-            return "redirect:/dashboard";
+            return AuthenticationController.isAdminSession(session) ? "redirect:/dashboard" : "redirect:/incident";
         }
         return "registerView"; }
 
@@ -242,6 +275,9 @@ public class WebController {
     public String dashboard(@CookieValue(value = "SESSION", required = false) String session, Model model) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
+        }
+        if (!AuthenticationController.isAdminSession(session)) {
+            return "redirect:/incident";
         }
         model.addAttribute("incidents", visibleTo(session, newestFirst(loadIncidentData().incidents())));
         return "dashboardView";
@@ -256,8 +292,14 @@ public class WebController {
         model.addAttribute("mapCenterLat", mapCenterLat);
         model.addAttribute("mapCenterLon", mapCenterLon);
         model.addAttribute("mapZoom", mapZoom);
+
+        IncidentData data = loadIncidentData();
+        AuthenticationController.Session user = AuthenticationController.getSession(session);
+        boolean isAdmin = user != null && user.isAdmin();
+        String userId = user != null ? user.userId() : null;
+
         // Plain values only, so they serialize cleanly into the page script
-        model.addAttribute("incidents", loadIncidentData().incidents().stream()
+        model.addAttribute("incidents", data.incidents().stream()
                 .map(incident -> {Map<String, Object> fields = new HashMap<>();
                         fields.put("incidentId", incident.incidentId());
                         fields.put("latitude", incident.latitude());
@@ -270,6 +312,9 @@ public class WebController {
                         fields.put("vehicleYear", incident.vehicleYear());
                         fields.put("createdTime", incident.createdTime().format(DISPLAY_TIME));
                         fields.put("hideInfo", incident.hideInfo());
+                        // Admins can open every incident; everyone else only their own reports.
+                        fields.put("canViewDetails", isAdmin
+                                || (userId != null && userId.equals(data.owners().get(incident.incidentId()))));
                         
                         if (!incident.hideInfo()) {
                                 fields.put("imageId", incident.imageId());
@@ -292,7 +337,7 @@ public class WebController {
             return "redirect:/login";
         }
 
-        List<Incident> incidents = newestFirst(loadIncidentData().incidents());
+        List<Incident> incidents = reportedBy(session, loadIncidentData());
         if (incidents.isEmpty()) {
             model.addAttribute("incidents", incidents);
             return "incidentView";
@@ -309,7 +354,12 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        return "redirect:/incident/" + findIncident(loadIncidentData(), id).incidentId(); }
+        IncidentData data = loadIncidentData();
+        return reportedBy(session, data).stream()
+                .filter(incident -> incident.incidentId().equals(id))
+                .findFirst()
+                .map(incident -> "redirect:/incident/" + incident.incidentId())
+                .orElse("redirect:/incident"); }
 
     @GetMapping({"/incident/{id}"})
     public String incident(@CookieValue(value = "SESSION", required = false) String session,
@@ -319,15 +369,22 @@ public class WebController {
         }
 
         IncidentData data = loadIncidentData();
-        Incident incident = findIncident(data, id);
+        List<Incident> incidents = reportedBy(session, data);
+        Incident incident = incidents.stream()
+                .filter(i -> i.incidentId().equals(id))
+                .findFirst()
+                .orElse(null);
+        if (incident == null) {
+            // Not this account's incident (or a sample): send them back to their list.
+            return "redirect:/incident";
+        }
 
         // Private fields are masked for everyone but admins
         boolean canSeePrivate = AuthenticationController.isAdminSession(session);
 
-        List<Incident> incidents = newestFirst(data.incidents());
         model.addAttribute("incidents", visibleTo(session, incidents));
 
-        // Neighbours in the newest-first list drive the picker's step buttons
+        // Neighbours in the account's newest-first list drive the picker's step buttons
         int position = incidents.indexOf(incident);
         model.addAttribute("incidentPosition", position + 1);
         model.addAttribute("newerIncidentId", position > 0 ? incidents.get(position - 1).incidentId() : null);
@@ -373,12 +430,15 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        if (db != null) {
-            try {
-                db.deleteIncident(Long.parseLong(id));
-            } catch (NumberFormatException e) {
-                // Sample incidents use non-numeric ids and have nothing to delete
-            }
+
+        IncidentData data = loadIncidentData();
+        // Admins may delete anything; users may delete only their own reports.
+        Incident target = reportedBy(session, data).stream()
+                .filter(incident -> incident.incidentId().equals(id))
+                .findFirst()
+                .orElse(null);
+        if (target != null && db != null && data.databaseIds().contains(target.incidentId())) {
+            db.deleteIncident(Long.parseLong(target.incidentId()));
         }
         return "redirect:/incident"; }
 
@@ -395,9 +455,12 @@ public class WebController {
             return ResponseEntity.notFound().build();
         }
 
+        // Only admins and the reporting account may fetch an incident's photo
+        Incident incident = findVisibleIncident(session, loadIncidentData(), String.valueOf(id));
+
         // Photos of private incidents are only served to admins
         if (!AuthenticationController.isAdminSession(session)
-                && findIncident(loadIncidentData(), String.valueOf(id)).hideInfo()) {
+                && incident.hideInfo()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
@@ -431,6 +494,9 @@ public class WebController {
     public String reports(@CookieValue(value = "SESSION", required = false) String session) { 
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
+        }
+        if (!AuthenticationController.isAdminSession(session)) {
+            return "redirect:/incident";
         }
         return "reportsView"; }
 

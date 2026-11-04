@@ -6,8 +6,16 @@
     var rangeText = document.getElementById('date-range-text');
     var shownMonth = new Date();
     shownMonth.setDate(1);
-    var startDate = null;
-    var stopDate = null;
+    // Matches the range shown in the header before anything is picked
+    var startDate = new Date(2026, 8, 1);
+    var stopDate = new Date(2026, 8, 30);
+
+    // Lets pages react to a completed range; stopDate is inclusive
+    function announceRange() {
+        document.dispatchEvent(new CustomEvent('daterangechange', {
+            detail: { startDate: startDate, stopDate: stopDate }
+        }));
+    }
 
     // First click sets the start date, second sets the stop date, third starts a new range
     function selectDate(date) {
@@ -26,6 +34,9 @@
         }
         rangeText.textContent = text;
         highlightSelection();
+        if (stopDate !== null) {
+            announceRange();
+        }
     }
 
     // Updates classes in place so the clicked cell stays in the DOM and the popup stays open
@@ -111,4 +122,6 @@
             setOpen(false);
         }
     });
+
+    announceRange();
 })();

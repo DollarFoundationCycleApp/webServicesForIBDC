@@ -135,7 +135,7 @@ public class WebControllerTest {
         assertNull(hidden.imageId());
     }
 
-    /** Sample incident 3 is marked private. */
+    /** Sample incident 5 is marked private. */
     @Test
     @SuppressWarnings("unchecked")
     public void heatmapOmitsPrivateFieldsOfPrivateIncidents() {
@@ -145,7 +145,7 @@ public class WebControllerTest {
         new WebController(null).heatmap(session, model);
 
         Map<String, Object> incident = ((List<Map<String, Object>>) model.getAttribute("incidents")).stream()
-                .filter(fields -> "3".equals(fields.get("incidentId")))
+                .filter(fields -> "5".equals(fields.get("incidentId")))
                 .findFirst()
                 .orElseThrow();
         assertFalse(incident.containsKey("licensePlate"));
@@ -166,7 +166,7 @@ public class WebControllerTest {
             assertPrivateIncidentMasked((List<Incident>) dashboard.getAttribute("incidents"));
 
             ExtendedModelMap incidentPage = new ExtendedModelMap();
-            controller.incident("user", "3", incidentPage);
+            controller.incident("user", "5", incidentPage);
             assertPrivateIncidentMasked((List<Incident>) incidentPage.getAttribute("incidents"));
             assertNull(((Incident) incidentPage.getAttribute("incident")).licensePlate());
         }
@@ -174,7 +174,7 @@ public class WebControllerTest {
 
     private static void assertPrivateIncidentMasked(List<Incident> incidents) {
         Incident incident = incidents.stream()
-                .filter(i -> i.incidentId().equals("3"))
+                .filter(i -> i.incidentId().equals("5"))
                 .findFirst()
                 .orElseThrow();
         assertNull(incident.licensePlate());

@@ -460,7 +460,8 @@ public class WebController {
         String lowerKeyword = keyword.toLowerCase();
         return incident.incidentId().toLowerCase().contains(lowerKeyword) ||
                 incident.driverInformation().toLowerCase().contains(lowerKeyword) ||
-                incident.extraComment().toLowerCase().contains(lowerKeyword);
+                incident.extraComment().toLowerCase().contains(lowerKeyword) ||
+                incident.additionalComments().toLowerCase().contains(lowerKeyword);
     }
 
     /**

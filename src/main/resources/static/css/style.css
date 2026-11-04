@@ -650,6 +650,44 @@ th {
     text-decoration: underline;
 }
 
+.reports-table img {
+    max-height: 60px;
+    width: auto;
+    border-radius: 4px;
+}
+
+.incident-row-image {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
+
+  /* Styling and hiding the popup wrapper by default */
+  .incident-row-image .image-popup {
+    display: none;
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background-color: white;
+    padding: 5px;
+    border: 1px solid #ccc;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  /* Ensure the image inside the popup stays a manageable size */
+  .incident-row-image .image-popup img {
+    max-width: 300px;
+    max-height: none;
+    height: auto;
+  }
+
+  .incident-row-image:hover .image-popup {
+    display: block;
+  }
+
 /* Reports Page Selector */
 .page-selector {
     display: flex;

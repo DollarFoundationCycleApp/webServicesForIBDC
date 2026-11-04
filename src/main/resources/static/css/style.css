@@ -619,6 +619,7 @@ th {
 .reports-table th,
 .reports-table td {
     padding: 10px 8px;
+    background-color: white;
 }
 
 .reports-table th {
@@ -627,7 +628,7 @@ th {
     border-bottom: 1px solid black;
 }
 
-.reports-table tr:nth-child(even) {
+.reports-table tr:nth-child(even) td {
     background-color: #fafafa;
 }
 

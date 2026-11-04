@@ -12,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -468,21 +467,31 @@ public class WebController {
      * Helper to build a list of page buttons
      */
     private static List<Integer> pageButtons(int current, int total) {
-    TreeSet<Integer> pages = new TreeSet<>();
-    for (int p : new int[]{1, current - 1, current, current + 1, total}) {
-        if (p >= 1 && p <= total) {
-            pages.add(p);
-        }
-    }
-
     List<Integer> buttons = new ArrayList<>();
-    int prev = 0;
-    for (int p : pages) {
-        if (p - prev > 1) {
-            buttons.add(-1);
+    if (total <= 7) {
+        for (int i = 1; i <= total; i++) {
+            buttons.add(i);
         }
-        buttons.add(p);
-        prev = p;
+    } else if (current <= 4) {
+        for (int i = 1; i <= 5; i++) {
+            buttons.add(i);
+        }
+        buttons.add(-1);
+        buttons.add(total);
+    } else if (current >= total - 3) {
+        buttons.add(1);
+        buttons.add(-1);
+        for (int i = total - 4; i <= total; i++) {
+            buttons.add(i);
+        }
+    } else {
+        buttons.add(1);
+        buttons.add(-1);
+        for (int i = current - 1; i <= current + 1; i++) {
+            buttons.add(i);
+        }
+        buttons.add(-1);
+        buttons.add(total);
     }
     return buttons;
 }

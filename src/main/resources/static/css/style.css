@@ -597,8 +597,8 @@ th {
     cursor: pointer;
 }
 
-/* Reports Reset button*/
-.reset-button {
+/* Reports Filter and Reset buttons */
+.reset-button, .filter-button {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -611,8 +611,90 @@ th {
     cursor: pointer;
 }
 
-.reset-button:hover {
+.reset-button:hover, .filter-button:hover {
     border-color: #ff6600;
+}
+
+.filter-button {
+    anchor-name: --filter-button;
+}
+
+.filter-popover {
+    position-anchor: --filter-button;
+    top: calc(anchor(bottom) + 6px);
+    left: calc(anchor(center));
+    transform: translateX(-50%);
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    width: 300px;
+    height: 400px;
+    background-color: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    padding: 12px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    cursor: default;
+}
+
+.filter-menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.filter-menu .full {
+    grid-column: 1 / -1;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.filter-header label {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.close-button {
+    border: none;
+    background: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.close-button:hover {
+    background-color: #f0f0f0;
+}
+
+.filter-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.filter-actions .reset-button,
+.filter-actions .apply-filters-button {
+    justify-content: center;
+    height: 38px;
+}
+
+.apply-filters-button {
+    font-size: 1rem;
+    width : 100%;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    background-color: #ff6600;
+    border: none;
+}
+
+.apply-filters-button:hover {
+    cursor: pointer;
+    border: 1px solid #000000;
 }
 
 /* Reports table */
@@ -661,10 +743,9 @@ th {
     position: relative;
     display: inline-block;
     cursor: pointer;
-  }
+}
 
-  /* Styling and hiding the popup wrapper by default */
-  .incident-row-image .image-popup {
+.incident-row-image .image-popup {
     display: none;
     position: absolute;
     right: calc(100% + 8px);
@@ -676,18 +757,17 @@ th {
     border: 1px solid #ccc;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     border-radius: 4px;
-  }
+}
 
-  /* Ensure the image inside the popup stays a manageable size */
-  .incident-row-image .image-popup img {
+.incident-row-image .image-popup img {
     max-width: 300px;
     max-height: none;
     height: auto;
-  }
+}
 
-  .incident-row-image:hover .image-popup {
+.incident-row-image:hover .image-popup {
     display: block;
-  }
+}
 
 /* Reports Page Selector */
 .page-selector {

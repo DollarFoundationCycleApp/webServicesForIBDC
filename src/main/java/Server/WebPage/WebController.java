@@ -363,8 +363,6 @@ public class WebController {
             return "redirect:/login";
         }
 
-        System.out.println("POST COLOR: " + vehicleColor);
-    
         httpSession.setAttribute("keyword", keyword.trim());
         httpSession.setAttribute("vehicleMake", vehicleMake.trim());
         httpSession.setAttribute("vehicleModel", vehicleModel.trim());
@@ -390,13 +388,15 @@ public class WebController {
         String vehicleMake = (String) httpSession.getAttribute("vehicleMake");
         String vehicleModel = (String) httpSession.getAttribute("vehicleModel");
         String vehicleColor = (String) httpSession.getAttribute("vehicleColor");
-
-        System.out.println("GET COLOR: " + vehicleColor);
-
+        Integer startYearAtt = (Integer) httpSession.getAttribute("startYear");
+        int startYear = startYearAtt == null ? -1 : startYearAtt;
+        Integer endYearAtt = (Integer) httpSession.getAttribute("endYear");
+        int endYear = endYearAtt == null ? -1 : endYearAtt;
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> keywordFilter(incident, keyword))
                 .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
+                .filter(incident -> yearFilter(incident, startYear, endYear))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
@@ -415,6 +415,8 @@ public class WebController {
         model.addAttribute("vehicleMake", vehicleMake);
         model.addAttribute("vehicleModel", vehicleModel);
         model.addAttribute("vehicleColor", vehicleColor);
+        model.addAttribute("startYear", startYear);
+        model.addAttribute("endYear", endYear);
 
         return "reportsView"; 
     }
@@ -453,6 +455,10 @@ public class WebController {
         boolean colorMatches = vehicleColor == null || vehicleColor.isEmpty() || 
             incident.vehicleColor().toLowerCase().contains(vehicleColor.toLowerCase());
         return makeMatches && modelMatches && colorMatches;
+    }
+
+    private static boolean yearFilter(Incident incident, int startYear, int endYear) {
+        return (startYear == -1 || startYear <= incident.vehicleYear()) && (endYear == -1 || endYear >= incident.vehicleYear());        
     }
 
     /**

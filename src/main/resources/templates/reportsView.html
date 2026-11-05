@@ -60,11 +60,11 @@
                             placeholder="Search by vehicle color" autocomplete="off">
                         <div class="year-range">
                             <select name="startYear" th:value="${startYear}">
-                                <option value=""></option>
+                                <option value="">Min</option>
                             </select>
-                            <label>-</label>
+                            <label>to</label>
                             <select name="endYear" th:value="${endYear}">
-                                <option value=""></option>
+                                <option value="">Max</option>
                             </select>
                         </div>
                     </div>
@@ -216,6 +216,40 @@
                 } else {
                     vehicleModelSelect.innerHTML = '<option value="">All</option>';
                     vehicleModelSelect.disabled = true;
+                }
+            });
+        </script>
+
+        <script>
+            let startYear = [[${startYear}]];
+            let endYear = [[${endYear}]];
+            
+            const startYearSelect = document.querySelector('select[name="startYear"]');
+            const endYearSelect = document.querySelector('select[name="endYear"]');
+
+            for (let year = new Date().getFullYear() + 1; year >= 1950; year--) {
+                startYearSelect.add(new Option(year, year));
+                endYearSelect.add(new Option(year, year));
+            }
+
+            if (startYear > 0) startYearSelect.value = startYear;
+            if (endYear > 0) endYearSelect.value = endYear;
+
+            startYearSelect.addEventListener('change', function () {
+                startYear = this.value;
+
+                if (startYear > endYear) {
+                    endYearSelect.value = "";
+                    endYear = -1;
+                }
+            });
+
+            endYearSelect.addEventListener('change', function () {
+                endYear = this.value;
+
+                if (endYear < startYear) {
+                    startYearSelect.value = "";
+                    startYear = -1;
                 }
             });
         </script>

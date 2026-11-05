@@ -676,13 +676,14 @@ th {
 
 .filter-row .year-range {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     gap: 10px;
 }
 
-.year-range label {
-    height: 30px;
+.filter-row .year-range label{
+    height: 28px;
+    color: #555555;
 }
 
 .filter-row label {

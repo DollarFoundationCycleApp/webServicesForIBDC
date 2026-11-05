@@ -709,8 +709,18 @@ th {
     cursor: pointer;
 }
 
+.filter-row input {
+    padding: 0 5px;
+}
+
 .filter-row input:hover {
     border-color: #ff6600;
+}
+
+.filter-row select:focus,
+.filter-row input:focus {
+    outline: none;
+    border: 1px solid #ff6600;
 }
 
 .filter-row button {

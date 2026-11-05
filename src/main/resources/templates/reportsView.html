@@ -51,6 +51,25 @@
                     </div>
 
                     <div class="filter-row full">
+                        <label>Vehicle Color</label>
+                        <label>Vehicle Year</label>
+                    </div>
+
+                    <div class="filter-row full">
+                        <input type="text" name="vehicleColor" th:value="${vehicleColor}" 
+                            placeholder="Search by vehicle color" autocomplete="off">
+                        <div class="year-range">
+                            <select name="startYear" th:value="${startYear}">
+                                <option value=""></option>
+                            </select>
+                            <label>-</label>
+                            <select name="endYear" th:value="${endYear}">
+                                <option value=""></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-row full">
                         <button form="reset-filters" class="reset-button" type="submit" aria-label="Reset">
                             <img class="icon" th:src="@{/icons/refresh.svg}" alt="">
                             Reset

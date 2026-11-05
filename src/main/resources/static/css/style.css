@@ -627,7 +627,7 @@ th {
     right: auto;
     bottom: auto;
     margin: 0;
-    width: 300px;
+    width: 350px;
     background-color: #ffffff;
     border: 1px solid #d8d8d8;
     border-radius: 4px;
@@ -674,13 +674,25 @@ th {
     gap: 12px;
 }
 
+.filter-row .year-range {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.year-range label {
+    height: 30px;
+}
+
 .filter-row label {
     font-size: 0.85rem;
     font-weight: bold;
     color: #333333;
 }
 
-.filter-row select {
+.filter-row select, 
+.filter-row input {
     width: 100%;
     height: 36px;
     margin-bottom: 12px;
@@ -694,6 +706,10 @@ th {
 .filter-row select:hover {
     border-color: #ff6600;
     cursor: pointer;
+}
+
+.filter-row input:hover {
+    border-color: #ff6600;
 }
 
 .filter-row button {

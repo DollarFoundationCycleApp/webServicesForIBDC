@@ -355,14 +355,23 @@ public class WebController {
                     @RequestParam(defaultValue = "10") int limit,
                     @RequestParam (defaultValue = "") String vehicleMake,
                     @RequestParam (defaultValue = "") String vehicleModel,
+                    @RequestParam (defaultValue = "") String vehicleColor,
+                    @RequestParam (defaultValue = "-1") int startYear,
+                    @RequestParam (defaultValue = "-1") int endYear,
                     HttpSession httpSession) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
+
+        System.out.println("POST COLOR: " + vehicleColor);
     
         httpSession.setAttribute("keyword", keyword.trim());
         httpSession.setAttribute("vehicleMake", vehicleMake.trim());
         httpSession.setAttribute("vehicleModel", vehicleModel.trim());
+        httpSession.setAttribute("vehicleColor", vehicleColor.trim());
+        httpSession.setAttribute("startYear", startYear);
+        httpSession.setAttribute("endYear", endYear);
+
         return "redirect:/reports?limit=" + limit; 
     }
 
@@ -380,11 +389,14 @@ public class WebController {
         String keyword = (String) httpSession.getAttribute("keyword");
         String vehicleMake = (String) httpSession.getAttribute("vehicleMake");
         String vehicleModel = (String) httpSession.getAttribute("vehicleModel");
+        String vehicleColor = (String) httpSession.getAttribute("vehicleColor");
+
+        System.out.println("GET COLOR: " + vehicleColor);
 
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> keywordFilter(incident, keyword))
-                .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel))
+                .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
@@ -402,6 +414,8 @@ public class WebController {
         model.addAttribute("keyword", keyword);
         model.addAttribute("vehicleMake", vehicleMake);
         model.addAttribute("vehicleModel", vehicleModel);
+        model.addAttribute("vehicleColor", vehicleColor);
+
         return "reportsView"; 
     }
 
@@ -426,13 +440,19 @@ public class WebController {
                 incident.additionalComments().toLowerCase().contains(lowerKeyword);
     }
 
-    private static boolean vehicleFilter(Incident incident, String vehicleMake, String vehicleModel) {
-        if ((vehicleMake == null || vehicleMake.isEmpty()) && (vehicleModel == null || vehicleModel.isEmpty())) {
+    private static boolean vehicleFilter(Incident incident, String vehicleMake, String vehicleModel, String vehicleColor) {
+        if ((vehicleMake == null || vehicleMake.isEmpty()) && 
+            (vehicleModel == null || vehicleModel.isEmpty()) &&
+            (vehicleColor == null || vehicleColor.isEmpty())) {
             return true;
         }
-        boolean makeMatches = vehicleMake == null || vehicleMake.isEmpty() || incident.vehicleMake().toLowerCase().contains(vehicleMake.toLowerCase());
-        boolean modelMatches = vehicleModel == null || vehicleModel.isEmpty() || incident.vehicleModel().toLowerCase().contains(vehicleModel.toLowerCase());
-        return makeMatches && modelMatches;
+        boolean makeMatches = vehicleMake == null || vehicleMake.isEmpty() || 
+            incident.vehicleMake().toLowerCase().contains(vehicleMake.toLowerCase());
+        boolean modelMatches = vehicleModel == null || vehicleModel.isEmpty() || 
+            incident.vehicleModel().toLowerCase().contains(vehicleModel.toLowerCase());
+        boolean colorMatches = vehicleColor == null || vehicleColor.isEmpty() || 
+            incident.vehicleColor().toLowerCase().contains(vehicleColor.toLowerCase());
+        return makeMatches && modelMatches && colorMatches;
     }
 
     /**

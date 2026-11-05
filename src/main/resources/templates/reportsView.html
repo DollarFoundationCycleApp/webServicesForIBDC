@@ -45,6 +45,8 @@
                         </select>
                         <select name="vehicleModel" th:value="${vehicleModel}" th:disabled="${vehicleMake == null or vehicleMake == ''}">
                             <option value="">All</option>
+                            <option th:each="model : ${vehicleModels}" th:value="${model}" th:text="${model}"
+                                th:selected="${model == vehicleModel}"></option>
                         </select>
                     </div>
 
@@ -169,6 +171,33 @@
                     const rowCheckbox = row.querySelector('input[type="checkbox"]');
                     rowCheckbox.checked = checkbox.checked;
                 });
+            });
+        </script>
+
+        <script>
+            const vehicleMakeSelect = document.querySelector('select[name="vehicleMake"]');
+            const vehicleModelSelect = document.querySelector('select[name="vehicleModel"]');
+
+            vehicleMakeSelect.addEventListener('change', function () {
+                const selectedMake = this.value;
+
+                if (selectedMake) {
+                    fetch(`/api/models?vehicleMake=${selectedMake}`)
+                        .then(response => response.json())
+                        .then(models => {
+                            vehicleModelSelect.innerHTML = '<option value="">All</option>';
+                            models.forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model;
+                                option.textContent = model;
+                                vehicleModelSelect.appendChild(option);
+                            });
+                            vehicleModelSelect.disabled = false;
+                        });
+                } else {
+                    vehicleModelSelect.innerHTML = '<option value="">All</option>';
+                    vehicleModelSelect.disabled = true;
+                }
             });
         </script>
 

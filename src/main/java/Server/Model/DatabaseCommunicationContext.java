@@ -388,6 +388,28 @@ public class DatabaseCommunicationContext {
         return makes;
     }
 
+    public List<String> getAllVehicleModels(String makeName) {
+        List<String> models = new ArrayList<>();
+        String sql = "SELECT vm.model_name FROM vehicle_models vm "
+                + "JOIN vehicle_makes vma ON vm.make_id = vma.make_id "
+                + "WHERE vma.make_name = ? ORDER BY vm.model_name";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, makeName);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    models.add(rs.getString("model_name"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching vehicle models: " + e.getMessage());
+        }
+
+        return models;
+    }
+
 
 
     private static boolean hasVehicleData(OffenderVehicle vehicle) {

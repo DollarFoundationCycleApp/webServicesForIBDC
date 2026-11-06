@@ -683,13 +683,14 @@ th {
 
 .filter-row .year-range label{
     height: 28px;
-    color: #555555;
+    font-weight: 400;
+    color: black;
 }
 
 .filter-row label {
-    font-size: 0.85rem;
+    font-size: .9rem;
     font-weight: bold;
-    color: #333333;
+    color: #3a3a3a;
 }
 
 .filter-row select, 
@@ -711,6 +712,10 @@ th {
 
 .filter-row input {
     padding: 0 5px;
+}
+
+.filter-row input::placeholder {
+    text-transform: none;
 }
 
 .filter-row input:hover {

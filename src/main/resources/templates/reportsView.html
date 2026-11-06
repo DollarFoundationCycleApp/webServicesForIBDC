@@ -9,7 +9,7 @@
                 <input type="hidden" name="limit" th:value="${limit}">
                 <div class="keyword-filter-wrap">
                     <input type="text" id="keyword" name="keyword" th:value="${keyword}"
-                        placeholder="Search by location or keyword" autocomplete="off">
+                        placeholder="Search by ID or keyword" autocomplete="off">
                     <button type="submit" aria-label="Search">
                         <img class="icon" th:src="@{/icons/magnify.svg}" alt="">
                     </button>
@@ -69,6 +69,16 @@
                         </div>
                     </div>
 
+                    <div class="filter-row full">
+                        <label>License Plate</label>
+                    </div>
+
+                    <div class="filter-row full">
+                        <input type="text" name="licensePlate" th:value="${licensePlate}"
+                            placeholder="Search by license plate" autocomplete="off" maxlength="8"
+                            pattern="[A-Za-z0-9]{0,8}" style="text-transform: uppercase;" 
+                            oninput="this.value = this.value.replace(/[^A-Za-z0-9]/g, '')">
+                    </div>
                     <div class="filter-row full">
                         <button form="reset-filters" class="reset-button" type="submit" aria-label="Reset">
                             <img class="icon" th:src="@{/icons/refresh.svg}" alt="">

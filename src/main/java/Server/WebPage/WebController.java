@@ -358,6 +358,7 @@ public class WebController {
                     @RequestParam (defaultValue = "") String vehicleColor,
                     @RequestParam (defaultValue = "-1") int startYear,
                     @RequestParam (defaultValue = "-1") int endYear,
+                    @RequestParam (defaultValue = "") String licensePlate,
                     HttpSession httpSession) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
@@ -369,6 +370,7 @@ public class WebController {
         httpSession.setAttribute("vehicleColor", vehicleColor.trim());
         httpSession.setAttribute("startYear", startYear);
         httpSession.setAttribute("endYear", endYear);
+        httpSession.setAttribute("licensePlate", licensePlate.trim());
 
         return "redirect:/reports?limit=" + limit; 
     }
@@ -392,11 +394,14 @@ public class WebController {
         int startYear = startYearAtt == null ? -1 : startYearAtt;
         Integer endYearAtt = (Integer) httpSession.getAttribute("endYear");
         int endYear = endYearAtt == null ? -1 : endYearAtt;
+        String licensePlate = (String) httpSession.getAttribute("licensePlate");
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> keywordFilter(incident, keyword))
                 .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                 .filter(incident -> yearFilter(incident, startYear, endYear))
+                .filter(incident -> licensePlate == null ? true : 
+                            incident.licensePlate().toLowerCase().contains(licensePlate.toLowerCase()))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
@@ -417,6 +422,7 @@ public class WebController {
         model.addAttribute("vehicleColor", vehicleColor);
         model.addAttribute("startYear", startYear);
         model.addAttribute("endYear", endYear);
+        model.addAttribute("licensePlate", licensePlate);
 
         return "reportsView"; 
     }

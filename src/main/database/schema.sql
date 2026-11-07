@@ -63,6 +63,21 @@ CREATE TABLE IF NOT EXISTS offender_vehicles (
     INDEX idx_state_or_region (state_or_region)
 );
 
+-- Vehicle Makes and Models Tables (for filtering)
+CREATE TABLE IF NOT EXISTS vehicle_makes (
+    make_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    make_name VARCHAR(100) UNIQUE NOT NULL        -- Vehicle make name
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_models (
+    model_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    make_id BIGINT NOT NULL,                      -- Foreign key linking to vehicle_makes
+    model_name VARCHAR(100) NOT NULL,             -- Vehicle model name
+    FOREIGN KEY (make_id) REFERENCES vehicle_makes(make_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE KEY uq_make_model (make_id, model_name)
+);
+
 -- User table for user authentication and incident reporting
 -- Usernames and emails are stored separately: the login form accepts either.
 -- Passwords are stored as SHA-256 hex hashes (see AuthenticationController).

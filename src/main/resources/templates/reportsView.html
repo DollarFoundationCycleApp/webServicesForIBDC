@@ -4,6 +4,266 @@
     <th:block th:fragment="content">
         <!-- Page Specific content-->
 
+        <div class="filter-items">
+            <form th:action="@{/reports}" method="post">
+                <input type="hidden" name="limit" th:value="${limit}">
+                <div class="keyword-filter-wrap">
+                    <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                        placeholder="Search by ID or keyword" autocomplete="off">
+                    <button type="submit" aria-label="Search">
+                        <img class="icon" th:src="@{/icons/magnify.svg}" alt="">
+                    </button>
+                </div>
+            </form>
+
+            <button class="filter-button" popovertarget="filter-popover" aria-label="Filter">
+                    <img class="icon" th:src="@{/icons/filter-outline.svg}" alt="">
+                    Filter
+            </button>
+
+            <div id="filter-popover" class="filter-popover" popover>
+                <div class="filter-header">
+                    <label class="advanced-filters">Advanced Filters</label>
+                    <button class="close-button" popovertarget="filter-popover" aria-label="Close">&times;</button>
+                </div>
+
+                    
+                <form class="filter-menu" th:action="@{/reports}" method="post">
+                    <input type="hidden" name="limit" th:value="${limit}">
+                    <input type="hidden" name="keyword" th:value="${keyword}">
+
+                    <div class="filter-row full">
+                        <label>Vehicle Make</label>
+                        <label>Vehicle Model</label>
+                    </div>
+
+                    <div class="filter-row full">
+                        <select name="vehicleMake" th:value="${vehicleMake}">
+                            <option value="">All</option>
+                            <option th:each="make : ${vehicleMakes}" th:value="${make}" th:text="${make}"
+                                th:selected="${make == vehicleMake}"></option>
+                        </select>
+                        <select name="vehicleModel" th:value="${vehicleModel}" th:disabled="${vehicleMake == null or vehicleMake == ''}">
+                            <option value="">All</option>
+                            <option th:each="model : ${vehicleModels}" th:value="${model}" th:text="${model}"
+                                th:selected="${model == vehicleModel}"></option>
+                        </select>
+                    </div>
+
+                    <div class="filter-row full">
+                        <label>Vehicle Color</label>
+                        <label>Vehicle Year</label>
+                    </div>
+
+                    <div class="filter-row full">
+                        <input type="text" name="vehicleColor" th:value="${vehicleColor}" 
+                            placeholder="Search by vehicle color" autocomplete="off">
+                        <div class="year-range">
+                            <select name="startYear" th:value="${startYear}">
+                                <option value="">Min</option>
+                            </select>
+                            <label>to</label>
+                            <select name="endYear" th:value="${endYear}">
+                                <option value="">Max</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-row full">
+                        <label>License Plate</label>
+                    </div>
+
+                    <div class="filter-row full">
+                        <input type="text" name="licensePlate" th:value="${licensePlate}"
+                            placeholder="Search by license plate" autocomplete="off" maxlength="8"
+                            pattern="[A-Za-z0-9]{0,8}" style="text-transform: uppercase;" 
+                            oninput="this.value = this.value.replace(/[^A-Za-z0-9]/g, '')">
+                    </div>
+                    <div class="filter-row full">
+                        <button form="reset-filters" class="reset-button" type="submit" aria-label="Reset">
+                            <img class="icon" th:src="@{/icons/refresh.svg}" alt="">
+                            Reset
+                        </button>
+                        <button type="submit" class="apply-filters-button">Apply Filters</button>
+                    </div>
+                </form>
+
+                <form id="reset-filters" th:action="@{/reports}" method="post">
+                    <input type="hidden" name="limit" th:value="${limit}">
+                    <input type="hidden" name="keyword" th:value="${keyword}">
+                </form>
+            </div>
+    
+            <form th:action="@{/reports}" method="post">
+                <input type="hidden" name="limit" th:value="${limit}">
+                <button class="reset-button" type="submit" aria-label="Reset">
+                    <img class="icon" th:src="@{/icons/refresh.svg}" alt="">
+                    Reset</button>
+            </form>
+        </div>
+
+
+        <div class="panel">
+            <table class="reports-table">
+                <colgroup>
+                    <col style="width: 44px;">
+                    <col style="width: 13%;">
+                    <col style="width: 15%;">
+                    <col style="width: 15%;">
+                    <col style="width: 24%;">
+                    <col style="width: 13%;">
+                    <col style="width: 8%;">
+                    <col>
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="all-incidents"></th>
+                        <th>Incident ID</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>Vehicle</th>
+                        <th>License Plate</th>
+                        <th>Driver</th>
+                        <th>Image Preview</th>
+                    </tr>
+                </thead>
+                <tr th:if="${#lists.isEmpty(incidents)}">
+                    <td colspan="8">No incidents match your search.</td>
+                </tr>
+                <tr class="incident-row" th:each="incident : ${incidents}">
+                    <td><input type="checkbox"></td>
+                    <td>
+                        <a class="incident-link" th:href="@{/incident/{id}(id=${incident.incidentId})}"
+                        th:text="${incident.incidentId}">N/A</a>
+                    </td>
+                    <td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}">N/A</td>
+                    <td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}">N/A</td>
+                    <td th:text="${incident.vehicleColor} + ' ' + ${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}">N/A</td>
+                    <td th:text="${incident.licensePlate}">N/A</td>
+                    <td th:text="${incident.driverPresent} ? 'Yes' : 'No'">No</td>
+                    <td>
+                        <div class="incident-row-image">
+                            <img th:src="@{/Images/{id}(id=${incident.imageId})}" onerror="this.onerror=null; this.src='/Images/PlaceHolder.jpg'">
+                            <div class="image-popup">
+                                <img th:src="@{/Images/{id}(id=${incident.imageId})}" onerror="this.onerror=null; this.src='/Images/PlaceHolder.jpg'">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <nav class="page-selector" th:if="${totalPages gt 1}">
+                <a class="page-button" th:classappend="${currentPage == 1} ? 'disabled'"
+                th:href="@{/reports(pageNum=${currentPage - 1}, limit=${limit})}">&lt;</a>
+    
+                <th:block th:each="p : ${pageButtons}">
+                    <span class="page-button ellipsis" th:if="${p == -1}">...</span>
+                    <a class="page-button" th:unless="${p == -1}"
+                    th:classappend="${p == currentPage} ? 'active'"
+                    th:href="@{/reports(pageNum=${p}, limit=${limit})}" th:text="${p}">1</a>
+                </th:block>
+    
+                <a class="page-button" th:classappend="${currentPage == totalPages} ? 'disabled'"
+                th:href="@{/reports(pageNum=${currentPage + 1}, limit=${limit})}">&gt;</a>
+            </nav>
+        </div>
+
+        <script>
+            const selectAllCheckbox = document.getElementById('all-incidents');
+            const rows = document.querySelectorAll('.incident-row');
+
+            selectAllCheckbox.addEventListener('change', function () {
+                rows.forEach(row => {
+                    row.querySelector('input[type="checkbox"]').checked = this.checked;
+                });
+            });
+            
+            
+            rows.forEach(row => {
+                row.addEventListener('click', function (event) {
+                    const checkbox = this.querySelector('input[type="checkbox"]');
+                    if (event.target !== checkbox && event.target !== this.querySelector('.incident-link')) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+
+                    if (rows.length === document.querySelectorAll('.incident-row input[type="checkbox"]:checked').length) {
+                        selectAllCheckbox.checked = true;
+                    } else {
+                        selectAllCheckbox.checked = false;
+                    }
+                });
+            });
+
+            document.getElementById('all-incidents').addEventListener('click', function (event) {
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                document.querySelectorAll('.incident-row').forEach(row => {
+                    const rowCheckbox = row.querySelector('input[type="checkbox"]');
+                    rowCheckbox.checked = checkbox.checked;
+                });
+            });
+        </script>
+
+        <script>
+            const vehicleMakeSelect = document.querySelector('select[name="vehicleMake"]');
+            const vehicleModelSelect = document.querySelector('select[name="vehicleModel"]');
+
+            vehicleMakeSelect.addEventListener('change', function () {
+                const selectedMake = this.value;
+
+                if (selectedMake) {
+                    fetch(`/api/models?vehicleMake=${selectedMake}`)
+                        .then(response => response.json())
+                        .then(models => {
+                            vehicleModelSelect.innerHTML = '<option value="">All</option>';
+                            models.forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model;
+                                option.textContent = model;
+                                vehicleModelSelect.appendChild(option);
+                            });
+                            vehicleModelSelect.disabled = false;
+                        });
+                } else {
+                    vehicleModelSelect.innerHTML = '<option value="">All</option>';
+                    vehicleModelSelect.disabled = true;
+                }
+            });
+        </script>
+
+        <script>
+            let startYear = [[${startYear}]];
+            let endYear = [[${endYear}]];
+            
+            const startYearSelect = document.querySelector('select[name="startYear"]');
+            const endYearSelect = document.querySelector('select[name="endYear"]');
+
+            for (let year = new Date().getFullYear() + 1; year >= 1950; year--) {
+                startYearSelect.add(new Option(year, year));
+                endYearSelect.add(new Option(year, year));
+            }
+
+            if (startYear > 0) startYearSelect.value = startYear;
+            if (endYear > 0) endYearSelect.value = endYear;
+
+            startYearSelect.addEventListener('change', function () {
+                startYear = this.value;
+
+                if (startYear > endYear) {
+                    endYearSelect.value = "";
+                    endYear = -1;
+                }
+            });
+
+            endYearSelect.addEventListener('change', function () {
+                endYear = this.value;
+
+                if (endYear < startYear) {
+                    startYearSelect.value = "";
+                    startYear = -1;
+                }
+            });
+        </script>
+
     </th:block>
 </body>
 </html>

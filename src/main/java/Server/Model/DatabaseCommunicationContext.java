@@ -71,6 +71,8 @@ public class DatabaseCommunicationContext {
         String vehicleSql = "INSERT INTO offender_vehicles (incident_id, license_plate, "
                 + "state_or_region, vehicle_make, vehicle_model, vehicle_color) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
+        String vehicleMakeIdSql = "SELECT make_id FROM vehicle_makes WHERE make_name = ?";
+        String vehicleModelSql = "INSERT IGNORE INTO vehicle_models (make_id, model_name) VALUES (?, ?)";
 
         Connection conn = null;
         try {
@@ -127,6 +129,15 @@ public class DatabaseCommunicationContext {
                 }
             }
 
+            if (vehicle != null) {
+                if (!vehicle.getVehicleMake().isEmpty() || vehicle.getVehicleMake() != null) {
+                    storeVehicleMake(vehicle.getVehicleMake());
+                    if (!vehicle.getVehicleModel().isEmpty() || vehicle.getVehicleModel() != null) {
+                        storeVehicleModel(vehicle.getVehicleMake(), vehicle.getVehicleModel());
+                    }
+                }
+            }
+
             conn.commit();
             return incidentId;
         } catch (SQLException e) {
@@ -159,6 +170,46 @@ public class DatabaseCommunicationContext {
             System.err.println("Error storing incident photo: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Store a vehicle make in the database if it doesn't already exist.
+     */
+    public boolean storeVehicleMake(String makeName) {
+        String sql = "INSERT IGNORE INTO vehicle_makes (make_name) VALUES (?)";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, makeName);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error storing vehicle make: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean storeVehicleModel(String makeName, String modelName) {
+        String sql = "SELECT make_id FROM vehicle_makes WHERE make_name = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, makeName);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int makeId = rs.getInt("make_id");
+                String modelSql = "INSERT IGNORE INTO vehicle_models (make_id, model_name) VALUES (?, ?)";
+                PreparedStatement modelPs = conn.prepareStatement(modelSql);
+                modelPs.setInt(1, makeId);
+                modelPs.setString(2, modelName);
+                return modelPs.executeUpdate() > 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error storing vehicle model: " + e.getMessage());
+            return false;
+        }
+        return false;
     }
 
     /**
@@ -389,7 +440,50 @@ public class DatabaseCommunicationContext {
         }
     }
 
-    private static boolean hasVehicleData(OffenderVehicle vehicle) {        return !vehicle.getLicensePlate().isEmpty()
+    public List<String> getAllVehicleMakes() {
+        List<String> makes = new ArrayList<>();
+        String sql = "SELECT make_name FROM vehicle_makes ORDER BY make_name";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                makes.add(rs.getString("make_name"));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching vehicle makes: " + e.getMessage());
+        }
+
+        return makes;
+    }
+
+    public List<String> getAllVehicleModels(String makeName) {
+        List<String> models = new ArrayList<>();
+        String sql = "SELECT vm.model_name FROM vehicle_models vm "
+                + "JOIN vehicle_makes vma ON vm.make_id = vma.make_id "
+                + "WHERE vma.make_name = ? ORDER BY vm.model_name";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, makeName);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    models.add(rs.getString("model_name"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching vehicle models: " + e.getMessage());
+        }
+
+        return models;
+    }
+
+
+
+    private static boolean hasVehicleData(OffenderVehicle vehicle) {
+        return !vehicle.getLicensePlate().isEmpty()
                 || !vehicle.getStateOrRegion().isEmpty()
                 || !vehicle.getVehicleMake().isEmpty()
                 || !vehicle.getVehicleModel().isEmpty()

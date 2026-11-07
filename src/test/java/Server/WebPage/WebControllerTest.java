@@ -6,6 +6,7 @@ import Server.Model.Incident;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -89,6 +90,27 @@ public class WebControllerTest {
         public boolean deleteIncident(long incidentId) {
             deletedId = incidentId;
             return true;
+        }
+
+        // Vehicle lookups stay in memory so tests never reach MySQL
+        @Override
+        public boolean storeVehicleMake(String makeName) {
+            return true;
+        }
+
+        @Override
+        public boolean storeVehicleModel(String makeName, String modelName) {
+            return true;
+        }
+
+        @Override
+        public List<String> getAllVehicleMakes() {
+            return List.of("Toyota");
+        }
+
+        @Override
+        public List<String> getAllVehicleModels(String makeName) {
+            return "Toyota".equals(makeName) ? List.of("Camry") : List.of();
         }
     }
 
@@ -236,8 +258,28 @@ public class WebControllerTest {
             assertEquals(List.of("300", "100"), picker.stream().map(Incident::incidentId).toList());
 
             assertEquals("redirect:/incident", controller.dashboard("user", new ExtendedModelMap()));
-            assertEquals("redirect:/incident", controller.reports("user"));
+            assertEquals("redirect:/incident",
+                    controller.reports("user", 1, 10, new MockHttpSession(), new ExtendedModelMap()));
         }
+    }
+
+    /** The reports search, its form post and the models lookup are all admin-only. */
+    @Test
+    public void reportsSearchIsAdminOnly() {
+        WebController controller = new WebController(new FakeDatabase());
+
+        try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
+            MockHttpSession httpSession = new MockHttpSession();
+            assertEquals("redirect:/incident", controller.searchReports("user", "ABC", 10,
+                    "Toyota", "", "", -1, -1, "", httpSession));
+            assertNull(httpSession.getAttribute("keyword"));
+            assertEquals(List.of(), controller.vehicleModels("user", "Toyota"));
+        }
+
+        String admin = AuthenticationController.authenticateUser("admin", "password");
+        assertEquals("redirect:/reports?limit=10", controller.searchReports(admin, "ABC", 10,
+                "Toyota", "", "", -1, -1, "", new MockHttpSession()));
+        assertEquals(List.of("Camry"), controller.vehicleModels(admin, "Toyota"));
     }
 
     /** Typing another account's incident id, or a sample id, sends them back. */
@@ -290,7 +332,8 @@ public class WebControllerTest {
         assertTrue(picker.stream().anyMatch(i -> i.incidentId().equals("200")));
 
         assertEquals("dashboardView", controller.dashboard(admin, new ExtendedModelMap()));
-        assertEquals("reportsView", controller.reports(admin));
+        assertEquals("reportsView",
+                controller.reports(admin, 1, 10, new MockHttpSession(), new ExtendedModelMap()));
     }
 
     /** Each pin is clickable only for incidents the account may open. */

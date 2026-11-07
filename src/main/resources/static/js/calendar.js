@@ -7,9 +7,10 @@
     var allTimeButton = document.getElementById('calendar-all-time');
     var shownMonth = new Date();
     shownMonth.setDate(1);
-    // Default range is the whole current month
-    var startDate = new Date(shownMonth.getFullYear(), shownMonth.getMonth(), 1);
-    var stopDate = new Date(shownMonth.getFullYear(), shownMonth.getMonth() + 1, 0);
+    // Default range is the current month so far: the 1st through today
+    var now = new Date();
+    var startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    var stopDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     // Lets pages react to a completed range; stopDate is inclusive.
     // "All time" is announced with both dates null.

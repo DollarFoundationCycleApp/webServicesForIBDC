@@ -472,8 +472,8 @@ public class WebController {
     /**
      * The calendar's range arrives as start/stop (inclusive ISO dates) or
      * allTime=true. It is kept in the session like the other filters so the
-     * page buttons keep it; with no range chosen yet the current month is used,
-     * matching the calendar's default.
+     * page buttons keep it; with no range chosen yet the 1st of the current
+     * month through today is used, matching the calendar's default.
      */
     @GetMapping({"/reports"})
     public String reports(@CookieValue(value = "SESSION", required = false) String session,
@@ -515,8 +515,9 @@ public class WebController {
         LocalDate rangeStart = (LocalDate) httpSession.getAttribute("rangeStart");
         LocalDate rangeStop = (LocalDate) httpSession.getAttribute("rangeStop");
         if (!rangeAllTime && (rangeStart == null || rangeStop == null)) {
-            rangeStart = LocalDate.now().withDayOfMonth(1);
-            rangeStop = rangeStart.plusMonths(1).minusDays(1);
+            // Current month so far, matching the calendar's default
+            rangeStop = LocalDate.now();
+            rangeStart = rangeStop.withDayOfMonth(1);
         }
         // stop is inclusive, so include everything up to the start of the following day
         LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();

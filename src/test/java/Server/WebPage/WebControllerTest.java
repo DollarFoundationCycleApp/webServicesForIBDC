@@ -319,10 +319,11 @@ public class WebControllerTest {
         assertEquals(Boolean.TRUE, allTime.getAttribute("rangeAllTime"));
         assertNull(allTime.getAttribute("rangeStart"));
 
-        // First visit defaults to the current month
+        // First visit defaults to the current month so far: the 1st through today
         ExtendedModelMap firstVisit = new ExtendedModelMap();
         controller.reports(admin, 1, 1000, null, null, false, new MockHttpSession(), firstVisit);
         assertEquals(LocalDate.now().withDayOfMonth(1).toString(), firstVisit.getAttribute("rangeStart"));
+        assertEquals(LocalDate.now().toString(), firstVisit.getAttribute("rangeStop"));
     }
 
     /** Typing another account's incident id, or a sample id, sends them back. */

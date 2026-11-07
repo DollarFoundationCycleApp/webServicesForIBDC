@@ -60,7 +60,8 @@
                 <div class="page-title" th:text="${title}">Title</div>
                 <div class="page-subtitle" th:text="${subTitle}">Overview of Safety Data</div>
             </div>
-            <div class="date-range">
+            <div class="date-range" id="date-range"
+                 th:data-default-range="${active == 'heatmap' ? 'all-time' : 'month'}">
                 <span id="date-range-text"></span>
                 <button type="button" class="calendar-button" id="calendar-button" aria-label="Open calendar" aria-expanded="false">
                     <image class="icon" th:src="@{/icons/calendar-month.svg}" alt=""></image>
@@ -81,6 +82,7 @@
                         <span class="calendar-weekday">Sa</span>
                     </div>
                     <div class="calendar-grid" id="calendar-days"></div>
+                    <button type="button" class="calendar-all-time" id="calendar-all-time" aria-pressed="false">All time</button>
                 </div>
             </div>
         </div>

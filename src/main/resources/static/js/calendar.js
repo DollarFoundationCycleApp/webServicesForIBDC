@@ -4,13 +4,15 @@
     var title = document.getElementById('calendar-title');
     var days = document.getElementById('calendar-days');
     var rangeText = document.getElementById('date-range-text');
+    var allTimeButton = document.getElementById('calendar-all-time');
     var shownMonth = new Date();
     shownMonth.setDate(1);
     // Default range is the whole current month
     var startDate = new Date(shownMonth.getFullYear(), shownMonth.getMonth(), 1);
     var stopDate = new Date(shownMonth.getFullYear(), shownMonth.getMonth() + 1, 0);
 
-    // Lets pages react to a completed range; stopDate is inclusive
+    // Lets pages react to a completed range; stopDate is inclusive.
+    // "All time" is announced with both dates null.
     function announceRange() {
         document.dispatchEvent(new CustomEvent('daterangechange', {
             detail: { startDate: startDate, stopDate: stopDate }
@@ -19,6 +21,7 @@
 
     // First click sets the start date, second sets the stop date, third starts a new range
     function selectDate(date) {
+        allTimeButton.setAttribute('aria-pressed', 'false');
         if (startDate === null || stopDate !== null) {
             startDate = date;
             stopDate = null;
@@ -110,6 +113,17 @@
         changeMonth(1);
     });
 
+    // Clears the range so pages show every incident; clicking a day afterwards starts a new range
+    allTimeButton.addEventListener('click', function () {
+        startDate = null;
+        stopDate = null;
+        rangeText.textContent = 'All time';
+        allTimeButton.setAttribute('aria-pressed', 'true');
+        highlightSelection();
+        announceRange();
+        setOpen(false);
+    });
+
     // Close when clicking outside the date range box or pressing Escape
     document.addEventListener('click', function (event) {
         if (!button.parentElement.contains(event.target)) {
@@ -123,6 +137,14 @@
         }
     });
 
-    rangeText.textContent = formatDate(startDate) + ' - ' + formatDate(stopDate);
+    // Each page picks its starting range: the heatmap starts on "All time", other pages on the current month
+    if (document.getElementById('date-range').dataset.defaultRange === 'all-time') {
+        startDate = null;
+        stopDate = null;
+        rangeText.textContent = 'All time';
+        allTimeButton.setAttribute('aria-pressed', 'true');
+    } else {
+        rangeText.textContent = formatDate(startDate) + ' - ' + formatDate(stopDate);
+    }
     announceRange();
 })();

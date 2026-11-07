@@ -267,6 +267,29 @@ body {
     transform: scale(1.1);
 }
 
+.calendar-all-time {
+    width: 100%;
+    margin-top: 10px;
+    padding: 6px 0;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    background-color: #ffffff;
+    color: #333333;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.calendar-all-time:hover {
+    background-color: #ffe3cc;
+}
+
+.calendar-all-time[aria-pressed="true"] {
+    background-color: #ff6600;
+    border-color: #ff6600;
+    color: #ffffff;
+    font-weight: bold;
+}
+
 /* Summary cards */
 .summary-cards {
     display: grid;

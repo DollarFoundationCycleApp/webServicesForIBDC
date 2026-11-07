@@ -110,13 +110,27 @@
         return new maplibregl.Marker().setLngLat(incidentLocations[index]).setPopup(popup);
     });
 
-    function updatePins() {
+    // Calendar date range; only incidents inside it are shown. Set by the 'daterangechange' event.
+    var incidentTimes = incidents.map(function (incident) {
+        return new Date(incident.createdIso).getTime();
+    });
+    var rangeStart = null;
+    var rangeEnd = null;
+
+    function inRange(index) {
+        if (rangeStart === null) {
+            return true;
+        }
+        return incidentTimes[index] >= rangeStart && incidentTimes[index] < rangeEnd;
+    }
+
+    function updatePins(force) {
         var showPins = map.getZoom() >= pinMinZoom;
-        if (showPins === pinsShown) {
+        if (showPins === pinsShown && force !== true) {
             return;
         }
-        incidentMarkers.forEach(function (marker) {
-            if (showPins) {
+        incidentMarkers.forEach(function (marker, index) {
+            if (showPins && inRange(index)) {
                 marker.addTo(map);
             } else {
                 marker.remove();
@@ -126,19 +140,43 @@
     }
     map.on('zoom', updatePins);
 
+    function heatmapData() {
+        var features = [];
+        incidentLocations.forEach(function (location, index) {
+            if (inRange(index)) {
+                features.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: location },
+                    properties: {}
+                });
+            }
+        });
+        return { type: 'FeatureCollection', features: features };
+    }
+
+    document.addEventListener('daterangechange', function (event) {
+        var start = event.detail.startDate;
+        var stop = event.detail.stopDate;
+        if (start === null) {
+            // "All time": show every incident
+            rangeStart = null;
+            rangeEnd = null;
+        } else {
+            rangeStart = start.getTime();
+            // stopDate is inclusive, so include everything up to the start of the following day
+            rangeEnd = new Date(stop.getFullYear(), stop.getMonth(), stop.getDate() + 1).getTime();
+        }
+        var source = map.getSource('incidents');
+        if (source) {
+            source.setData(heatmapData());
+            updatePins(true);
+        }
+    });
+
     function incidentHeatmap() {
         map.addSource('incidents', {
             type: 'geojson',
-            data: {
-                type: 'FeatureCollection',
-                features: incidentLocations.map(function (location) {
-                    return {
-                        type: 'Feature',
-                        geometry: { type: 'Point', coordinates: location },
-                        properties: {}
-                    };
-                })
-            }
+            data: heatmapData()
         });
 
         // Each incident raises the heat at its spot; overlapping incidents stack.

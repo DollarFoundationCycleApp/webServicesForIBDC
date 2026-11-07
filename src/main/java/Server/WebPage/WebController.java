@@ -258,6 +258,8 @@ public class WebController {
                         fields.put("vehicleColor", incident.vehicleColor());
                         fields.put("vehicleYear", incident.vehicleYear());
                         fields.put("createdTime", incident.createdTime().format(DISPLAY_TIME));
+                        // Machine-readable timestamp so heatmap.js can filter incidents by the calendar's date range
+                        fields.put("createdIso", incident.createdTime().toString());
                         fields.put("hideInfo", incident.hideInfo());
                         
                         if (!incident.hideInfo()) {

@@ -102,6 +102,20 @@
             document.addEventListener('daterangechange', function (event) {
                 const start = event.detail.startDate;
                 const stop = event.detail.stopDate;
+                const trend = document.getElementById('incident-trend');
+
+                // "All time": count everything; there is no previous period to compare with
+                if (start === null) {
+                    document.getElementById('incident-count').textContent = incidentTimes.length;
+                    trend.classList.remove('up', 'down');
+                    trend.textContent = '';
+                    const allTimeNote = document.createElement('span');
+                    allTimeNote.className = 'card-trend-note';
+                    allTimeNote.textContent = 'All time';
+                    trend.appendChild(allTimeNote);
+                    return;
+                }
+
                 // stopDate is inclusive, so count up to the start of the following day
                 const current = countBetween(start, new Date(stop.getFullYear(), stop.getMonth(), stop.getDate() + 1));
                 const previous = countBetween(new Date(start.getFullYear(), start.getMonth() - 1, 1),
@@ -109,7 +123,6 @@
 
                 document.getElementById('incident-count').textContent = current;
 
-                const trend = document.getElementById('incident-trend');
                 const note = document.createElement('span');
                 note.className = 'card-trend-note';
                 note.textContent = ' vs last period';

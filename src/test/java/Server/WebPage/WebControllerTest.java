@@ -10,6 +10,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -259,7 +260,7 @@ public class WebControllerTest {
 
             assertEquals("redirect:/incident", controller.dashboard("user", new ExtendedModelMap()));
             assertEquals("redirect:/incident",
-                    controller.reports("user", 1, 10, new MockHttpSession(), new ExtendedModelMap()));
+                    controller.reports("user", 1, 10, null, null, false, new MockHttpSession(), new ExtendedModelMap()));
         }
     }
 
@@ -280,6 +281,48 @@ public class WebControllerTest {
         assertEquals("redirect:/reports?limit=10", controller.searchReports(admin, "ABC", 10,
                 "Toyota", "", "", -1, -1, "", new MockHttpSession()));
         assertEquals(List.of("Camry"), controller.vehicleModels(admin, "Toyota"));
+    }
+
+    /**
+     * Reports follow the calendar: the chosen range sticks in the session so
+     * paging keeps it, "All time" shows everything, and a first visit uses
+     * the current month like the calendar does.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void reportsFilterByCalendarRange() {
+        String admin = AuthenticationController.authenticateUser("admin", "password");
+        WebController controller = new WebController(new FakeDatabase());
+        MockHttpSession httpSession = new MockHttpSession();
+        LocalDate september = LocalDate.of(2026, 9, 1);
+
+        // Reversed dates are swapped into order
+        ExtendedModelMap ranged = new ExtendedModelMap();
+        controller.reports(admin, 1, 1000, september.plusDays(29), september, false, httpSession, ranged);
+        List<Incident> inSeptember = (List<Incident>) ranged.getAttribute("incidents");
+        assertFalse(inSeptember.isEmpty());
+        assertTrue(inSeptember.stream().allMatch(i -> i.createdTime().getMonthValue() == 9
+                && i.createdTime().getYear() == 2026));
+        assertEquals("2026-09-01", ranged.getAttribute("rangeStart"));
+        assertEquals("2026-09-30", ranged.getAttribute("rangeStop"));
+
+        // A page button carries no dates; the session keeps the range
+        ExtendedModelMap nextPage = new ExtendedModelMap();
+        controller.reports(admin, 1, 1000, null, null, false, httpSession, nextPage);
+        assertEquals(inSeptember, nextPage.getAttribute("incidents"));
+
+        // All time includes the 1970 database incidents
+        ExtendedModelMap allTime = new ExtendedModelMap();
+        controller.reports(admin, 1, 1000, null, null, true, httpSession, allTime);
+        assertTrue(((List<Incident>) allTime.getAttribute("incidents")).stream()
+                .anyMatch(i -> i.incidentId().equals("100")));
+        assertEquals(Boolean.TRUE, allTime.getAttribute("rangeAllTime"));
+        assertNull(allTime.getAttribute("rangeStart"));
+
+        // First visit defaults to the current month
+        ExtendedModelMap firstVisit = new ExtendedModelMap();
+        controller.reports(admin, 1, 1000, null, null, false, new MockHttpSession(), firstVisit);
+        assertEquals(LocalDate.now().withDayOfMonth(1).toString(), firstVisit.getAttribute("rangeStart"));
     }
 
     /** Typing another account's incident id, or a sample id, sends them back. */
@@ -333,7 +376,7 @@ public class WebControllerTest {
 
         assertEquals("dashboardView", controller.dashboard(admin, new ExtendedModelMap()));
         assertEquals("reportsView",
-                controller.reports(admin, 1, 10, new MockHttpSession(), new ExtendedModelMap()));
+                controller.reports(admin, 1, 10, null, null, false, new MockHttpSession(), new ExtendedModelMap()));
     }
 
     /** Each pin is clickable only for incidents the account may open. */

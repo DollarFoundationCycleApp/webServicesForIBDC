@@ -137,13 +137,26 @@
         }
     });
 
-    // Each page picks its starting range: the heatmap starts on "All time", other pages on the current month
-    if (document.getElementById('date-range').dataset.defaultRange === 'all-time') {
+    // "yyyy-MM-dd" as a local date, matching the dates of the calendar cells
+    function parseIsoDate(text) {
+        var parts = text.split('-');
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    }
+
+    // Each page picks its starting range: the heatmap starts on "All time", other pages on the current month.
+    // A page filtered on the server (reports) passes its range in so the calendar shows it after reloading.
+    var dateRange = document.getElementById('date-range');
+    if (dateRange.dataset.defaultRange === 'all-time') {
         startDate = null;
         stopDate = null;
         rangeText.textContent = 'All time';
         allTimeButton.setAttribute('aria-pressed', 'true');
     } else {
+        if (dateRange.dataset.rangeStart && dateRange.dataset.rangeStop) {
+            startDate = parseIsoDate(dateRange.dataset.rangeStart);
+            stopDate = parseIsoDate(dateRange.dataset.rangeStop);
+            shownMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        }
         rangeText.textContent = formatDate(startDate) + ' - ' + formatDate(stopDate);
     }
     announceRange();

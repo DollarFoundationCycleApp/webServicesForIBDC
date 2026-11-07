@@ -29,7 +29,7 @@ loginForm.addEventListener('submit', async (event) => {
         }
 
         sessionStorage.setItem('userId', result.userId);
-        window.location.href = '/dashboard';
+        window.location.href = result.isAdmin ? '/dashboard' : '/incident';
     } catch (error) {
         loginMessage.textContent = 'Unable to reach the server.';
     }

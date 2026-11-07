@@ -23,15 +23,24 @@ import IBDCServer.Server.IBDCServerV021.HeatmapDataRequest;
 import IBDCServer.Server.IBDCServerV021.ServerToWeb;
 import IBDCServer.Server.IBDCServerV021.WebToServer;
 import Server.Controller.AuthenticationController;
+import Server.Model.DatabaseCommunicationContext;
 
 // Handles the different request endpoints from the web
 @RestController
 public class WebRequestHandler {
     private static final String PROTO = "application/x-protobuf";
-    
+    private static final Duration SESSION_LIFETIME = Duration.ofHours(8);
+
+    private final DatabaseCommunicationContext db;
+
+    public WebRequestHandler(DatabaseCommunicationContext db) {
+        this.db = db;
+    }
+
     @PostMapping(value = "/api/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> loginJson(@RequestBody LoginRequest request) {
         String sessionToken = AuthenticationController.authenticateUser(
+                db,
                 request.usernameOrEmail(),
                 request.password()
         );
@@ -44,21 +53,65 @@ public class WebRequestHandler {
                     ));
         }
 
-        ResponseCookie cookie = ResponseCookie.from("SESSION", sessionToken)
+        AuthenticationController.Session session = AuthenticationController.getSession(sessionToken);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, sessionCookie(sessionToken).toString())
+                .body(Map.of(
+                    "authenticated", true,
+                    "userId", session.userId(),
+                    "sessionToken", sessionToken,
+                    "isAdmin", session.isAdmin()
+        ));
+    }
+
+    @PostMapping(value = "/api/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> registerJson(@RequestBody RegisterRequest request) {
+        AuthenticationController.RegisterResult result = AuthenticationController.register(
+                db,
+                request.username(),
+                request.email(),
+                request.password(),
+                request.confirmPassword()
+        );
+
+        if (result.status() != AuthenticationController.RegisterStatus.SUCCESS) {
+            return ResponseEntity.status(statusFor(result.status()))
+                    .body(Map.of(
+                            "registered", false,
+                            "message", result.message()
+                    ));
+        }
+
+        AuthenticationController.Session session = AuthenticationController.getSession(result.sessionToken());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, sessionCookie(result.sessionToken()).toString())
+                .body(Map.of(
+                    "registered", true,
+                    "message", result.message(),
+                    "userId", session.userId(),
+                    "sessionToken", result.sessionToken(),
+                    "isAdmin", session.isAdmin()
+        ));
+    }
+
+    private static HttpStatus statusFor(AuthenticationController.RegisterStatus status) {
+        return switch (status) {
+            case INVALID -> HttpStatus.BAD_REQUEST;
+            case DUPLICATE -> HttpStatus.CONFLICT;
+            case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case SUCCESS -> HttpStatus.OK;
+        };
+    }
+
+    private static ResponseCookie sessionCookie(String sessionToken) {
+        return ResponseCookie.from("SESSION", sessionToken)
             .httpOnly(true)
             .path("/")
             .sameSite("Lax")
-            .maxAge(Duration.ofHours(8))
+            .maxAge(SESSION_LIFETIME)
             .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(Map.of(
-                    "authenticated", true,
-                    "userId", request.usernameOrEmail(),
-                    "sessionToken", sessionToken,
-                    "isAdmin", true
-        ));
     }
 
     @PostMapping(value = "/api/logout", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -149,5 +202,8 @@ public class WebRequestHandler {
     }
 
     public record LoginRequest(String usernameOrEmail, String password) {
+    }
+
+    public record RegisterRequest(String username, String email, String password, String confirmPassword) {
     }
 }

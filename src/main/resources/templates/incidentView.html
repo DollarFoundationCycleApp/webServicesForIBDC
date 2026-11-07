@@ -49,21 +49,21 @@
                         <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Driver Information</th><td th:text="${incident.driverInformation} != '' ? ${incident.driverInformation} : 'None'"></td></tr>
                         <tr th:if="${canSeePrivate or !incident.hideInfo}"><th>Comment</th><td th:text="${incident.extraComment} != '' ? ${incident.extraComment} : 'No Comment'"></td></tr>
                         <tr th:if="${canSeePrivate}"><th>Private</th><td th:text="${incident.hideInfo} ? 'Yes' : 'No'"></td></tr>
-                        <tr>
-                            <th><label for="additional-comments">Additional Comments</label></th>
+                        <tr th:if="${canSeePrivate}">
+                            <th><label for="additional-comments">Admin Notes</label></th>
                             <td>
                                 <form th:if="${databaseIncidentIds.contains(incident.incidentId)}"
                                         th:action="@{/incident/{id}/comments(id=${incident.incidentId})}" method="post">
                                     <textarea id="additional-comments" class="additional-comments-input" name="additionalComments"
                                             rows="4" maxlength="5000" th:text="${incident.additionalComments}"></textarea>
                                     <div class="additional-comments-actions">
-                                        <button type="submit" class="save-comments-button">Save Comments</button>
+                                        <button type="submit" class="save-comments-button">Save Notes</button>
                                         <span class="comments-status" th:if="${param.commentsSaved != null and param.commentsSaved[0] == 'true'}">Saved</span>
-                                        <span class="comments-status comments-status-error" th:if="${param.commentsSaved != null and param.commentsSaved[0] != 'true'}">Comments could not be saved</span>
+                                        <span class="comments-status comments-status-error" th:if="${param.commentsSaved != null and param.commentsSaved[0] != 'true'}">Notes could not be saved</span>
                                     </div>
                                 </form>
                                 <textarea th:unless="${databaseIncidentIds.contains(incident.incidentId)}" id="additional-comments"
-                                        class="additional-comments-input" rows="2" disabled>Sample incident shown. Comments wont be saved.</textarea>
+                                        class="additional-comments-input" rows="2" disabled>Sample incident shown. Notes wont be saved.</textarea>
                             </td>
                         </tr>
                     </tbody>

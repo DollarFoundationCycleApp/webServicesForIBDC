@@ -16,7 +16,7 @@
                 <span>IBDC Server</span>
             </div>
             <nav class="nav-list">
-                <a class="nav-row" th:classappend="${active == 'dashboard'} ? 'selected'" th:href="@{/dashboard}">
+                <a class="nav-row" th:if="${currentUserIsAdmin}" th:classappend="${active == 'dashboard'} ? 'selected'" th:href="@{/dashboard}">
                     <image class="icon" th:src="@{/icons/home.svg}" alt=""></image>
                     <span>Dashboard</span>
                 </a>
@@ -24,7 +24,7 @@
                     <image class="icon" th:src="@{/icons/map.svg}" alt=""></image>
                     <span>Heatmap</span>
                 </a>
-                <a class="nav-row" th:classappend="${active == 'reports'} ? 'selected'" th:href="@{/reports}">
+                <a class="nav-row" th:if="${currentUserIsAdmin}" th:classappend="${active == 'reports'} ? 'selected'" th:href="@{/reports}">
                     <image class="icon" th:src="@{/icons/view-list.svg}" alt=""></image>
                     <span>Reports</span>
                 </a>
@@ -43,8 +43,8 @@
             <div class="profile-row">
                 <image class="icon" th:src="@{/icons/card-account-details.svg}" alt=""></image>
                 <div class="profile-text">
-                    <span class="name">Rob Dollar</span>
-                    <span class="role">Administrator</span>
+                    <span class="name" th:text="${#strings.isEmpty(currentUsername)} ? 'Guest' : ${currentUsername}">Account</span>
+                    <span class="role" th:text="${currentUserIsAdmin} ? 'Administrator' : 'User'">User</span>
                 </div>
             </div>
             <button class="logout-row" id="logout-button" type="button">
@@ -60,8 +60,10 @@
                 <div class="page-title" th:text="${title}">Title</div>
                 <div class="page-subtitle" th:text="${subTitle}">Overview of Safety Data</div>
             </div>
-            <div class="date-range">
-                <span id="date-range-text">09/01/26 - 09/30/26</span>
+            <div class="date-range" id="date-range"
+                 th:data-default-range="${active == 'heatmap' or rangeAllTime == true ? 'all-time' : 'month'}"
+                 th:data-range-start="${rangeStart}" th:data-range-stop="${rangeStop}">
+                <span id="date-range-text"></span>
                 <button type="button" class="calendar-button" id="calendar-button" aria-label="Open calendar" aria-expanded="false">
                     <image class="icon" th:src="@{/icons/calendar-month.svg}" alt=""></image>
                 </button>
@@ -81,6 +83,7 @@
                         <span class="calendar-weekday">Sa</span>
                     </div>
                     <div class="calendar-grid" id="calendar-days"></div>
+                    <button type="button" class="calendar-all-time" id="calendar-all-time" aria-pressed="false">All time</button>
                 </div>
             </div>
         </div>

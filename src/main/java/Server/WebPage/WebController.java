@@ -1,6 +1,7 @@
 package Server.WebPage;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -15,6 +16,7 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,9 +65,11 @@ public class WebController {
         this.db = db;
         
         // Load sample vehicle makes and models into the database
-        for (Incident sample : SAMPLE_INCIDENTS) {
-            db.storeVehicleMake(sample.vehicleMake());
-            db.storeVehicleModel(sample.vehicleMake(), sample.vehicleModel());
+        if (db != null) {
+            for (Incident sample : SAMPLE_INCIDENTS) {
+                db.storeVehicleMake(sample.vehicleMake());
+                db.storeVehicleModel(sample.vehicleMake(), sample.vehicleModel());
+            }
         }
     }
     
@@ -85,6 +90,17 @@ public class WebController {
     }
 
     /**
+     * Make the signed-in account available to every page so the sidebar can
+     * show the username and whether the account is an admin.
+     */
+    @ModelAttribute
+    public void addCurrentUser(@CookieValue(value = "SESSION", required = false) String session, Model model) {
+        AuthenticationController.Session user = AuthenticationController.getSession(session);
+        model.addAttribute("currentUsername", user != null ? user.username() : "");
+        model.addAttribute("currentUserIsAdmin", user != null && user.isAdmin());
+    }
+
+    /**
      * Merge the sample incidents with those stored in the database. Database
      * incidents replace any sample sharing the same id and add new ones, so the
      * pages gradually fill out with real data as reports arrive. The ids that
@@ -92,6 +108,7 @@ public class WebController {
      */
     private IncidentData loadIncidentData() {
         Map<String, Incident> merged = new LinkedHashMap<>();
+        Map<String, String> owners = new HashMap<>();
         for (Incident sample : SAMPLE_INCIDENTS) {
             merged.put(sample.incidentId(), sample);
         }
@@ -102,12 +119,44 @@ public class WebController {
                 Incident incident = toIncident(row);
                 merged.put(incident.incidentId(), incident);
                 databaseIds.add(incident.incidentId());
+                if (row.get("user_id") != null) {
+                    owners.put(incident.incidentId(), row.get("user_id").toString());
+                }
             }
         }
-        return new IncidentData(new ArrayList<>(merged.values()), databaseIds);
+        return new IncidentData(new ArrayList<>(merged.values()), databaseIds, owners);
     }
 
-    private record IncidentData(List<Incident> incidents, Set<String> databaseIds) {
+    private record IncidentData(List<Incident> incidents, Set<String> databaseIds,
+                                Map<String, String> owners) {
+    }
+
+    /**
+     * The incidents an account is allowed to browse: admins see everything,
+     * everyone else sees only the incidents they reported. Sample incidents
+     * have no owner, so they stay admin-only. Newest first.
+     */
+    private static List<Incident> reportedBy(String session, IncidentData data) {
+        AuthenticationController.Session user = AuthenticationController.getSession(session);
+        if (user == null) {
+            return List.of();
+        }
+        if (user.isAdmin()) {
+            return newestFirst(data.incidents());
+        }
+
+        String userId = user.userId();
+        return newestFirst(data.incidents().stream()
+                .filter(incident -> userId != null && userId.equals(data.owners().get(incident.incidentId())))
+                .toList());
+    }
+
+    /** Look up an incident the account is allowed to see, or fail with 404. */
+    private static Incident findVisibleIncident(String session, IncidentData data, String id) {
+        return reportedBy(session, data).stream()
+                .filter(incident -> incident.incidentId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     private static List<Incident> newestFirst(List<Incident> incidents) {
@@ -160,14 +209,24 @@ public class WebController {
     @GetMapping({"/", "/login"})
     public String login(@CookieValue(value = "SESSION", required = false) String session) {
         if (AuthenticationController.isValidSession(session)) {
-            return "redirect:/dashboard";
+            return AuthenticationController.isAdminSession(session) ? "redirect:/dashboard" : "redirect:/incident";
         }
         return "loginView"; }
+
+    @GetMapping({"/register"})
+    public String register(@CookieValue(value = "SESSION", required = false) String session) {
+        if (AuthenticationController.isValidSession(session)) {
+            return AuthenticationController.isAdminSession(session) ? "redirect:/dashboard" : "redirect:/incident";
+        }
+        return "registerView"; }
 
     @GetMapping({"/dashboard"})
     public String dashboard(@CookieValue(value = "SESSION", required = false) String session, Model model) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
+        }
+        if (!AuthenticationController.isAdminSession(session)) {
+            return "redirect:/incident";
         }
         model.addAttribute("incidents", visibleTo(session, newestFirst(loadIncidentData().incidents())));
         return "dashboardView";
@@ -182,8 +241,14 @@ public class WebController {
         model.addAttribute("mapCenterLat", mapCenterLat);
         model.addAttribute("mapCenterLon", mapCenterLon);
         model.addAttribute("mapZoom", mapZoom);
+
+        IncidentData data = loadIncidentData();
+        AuthenticationController.Session user = AuthenticationController.getSession(session);
+        boolean isAdmin = user != null && user.isAdmin();
+        String userId = user != null ? user.userId() : null;
+
         // Plain values only, so they serialize cleanly into the page script
-        model.addAttribute("incidents", loadIncidentData().incidents().stream()
+        model.addAttribute("incidents", data.incidents().stream()
                 .map(incident -> {Map<String, Object> fields = new HashMap<>();
                         fields.put("incidentId", incident.incidentId());
                         fields.put("latitude", incident.latitude());
@@ -195,7 +260,12 @@ public class WebController {
                         fields.put("vehicleColor", incident.vehicleColor());
                         fields.put("vehicleYear", incident.vehicleYear());
                         fields.put("createdTime", incident.createdTime().format(DISPLAY_TIME));
+                        // Machine-readable timestamp so heatmap.js can filter incidents by the calendar's date range
+                        fields.put("createdIso", incident.createdTime().toString());
                         fields.put("hideInfo", incident.hideInfo());
+                        // Admins can open every incident; everyone else only their own reports.
+                        fields.put("canViewDetails", isAdmin
+                                || (userId != null && userId.equals(data.owners().get(incident.incidentId()))));
                         
                         if (!incident.hideInfo()) {
                                 fields.put("imageId", incident.imageId());
@@ -218,7 +288,7 @@ public class WebController {
             return "redirect:/login";
         }
 
-        List<Incident> incidents = newestFirst(loadIncidentData().incidents());
+        List<Incident> incidents = reportedBy(session, loadIncidentData());
         if (incidents.isEmpty()) {
             model.addAttribute("incidents", incidents);
             return "incidentView";
@@ -235,7 +305,12 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        return "redirect:/incident/" + findIncident(loadIncidentData(), id).incidentId(); }
+        IncidentData data = loadIncidentData();
+        return reportedBy(session, data).stream()
+                .filter(incident -> incident.incidentId().equals(id))
+                .findFirst()
+                .map(incident -> "redirect:/incident/" + incident.incidentId())
+                .orElse("redirect:/incident"); }
 
     @GetMapping({"/incident/{id}"})
     public String incident(@CookieValue(value = "SESSION", required = false) String session,
@@ -245,15 +320,22 @@ public class WebController {
         }
 
         IncidentData data = loadIncidentData();
-        Incident incident = findIncident(data, id);
+        List<Incident> incidents = reportedBy(session, data);
+        Incident incident = incidents.stream()
+                .filter(i -> i.incidentId().equals(id))
+                .findFirst()
+                .orElse(null);
+        if (incident == null) {
+            // Not this account's incident (or a sample): send them back to their list.
+            return "redirect:/incident";
+        }
 
         // Private fields are masked for everyone but admins
         boolean canSeePrivate = AuthenticationController.isAdminSession(session);
 
-        List<Incident> incidents = newestFirst(data.incidents());
         model.addAttribute("incidents", visibleTo(session, incidents));
 
-        // Neighbours in the newest-first list drive the picker's step buttons
+        // Neighbours in the account's newest-first list drive the picker's step buttons
         int position = incidents.indexOf(incident);
         model.addAttribute("incidentPosition", position + 1);
         model.addAttribute("newerIncidentId", position > 0 ? incidents.get(position - 1).incidentId() : null);
@@ -267,15 +349,18 @@ public class WebController {
     }
 
     /**
-     * Save the additional comments of a database incident. Any signed-in user
-     * may edit them. Sample incidents have no row to save to, so they report
-     * a failed save.
+     * Save the additional comments of a database incident. Only admins may
+     * edit them. Sample incidents have no row to save to, so they report a
+     * failed save.
      */
     @PostMapping({"/incident/{id}/comments"})
     public String saveAdditionalComments(@CookieValue(value = "SESSION", required = false) String session,
                 @PathVariable String id, @RequestParam String additionalComments) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
+        }
+        if (!AuthenticationController.isAdminSession(session)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can edit incident notes");
         }
 
         // Browsers send line breaks as \r\n, but maxlength counts them as one character
@@ -296,12 +381,15 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        if (db != null) {
-            try {
-                db.deleteIncident(Long.parseLong(id));
-            } catch (NumberFormatException e) {
-                // Sample incidents use non-numeric ids and have nothing to delete
-            }
+
+        IncidentData data = loadIncidentData();
+        // Admins may delete anything; users may delete only their own reports.
+        Incident target = reportedBy(session, data).stream()
+                .filter(incident -> incident.incidentId().equals(id))
+                .findFirst()
+                .orElse(null);
+        if (target != null && db != null && data.databaseIds().contains(target.incidentId())) {
+            db.deleteIncident(Long.parseLong(target.incidentId()));
         }
         return "redirect:/incident"; }
 
@@ -318,9 +406,12 @@ public class WebController {
             return ResponseEntity.notFound().build();
         }
 
+        // Only admins and the reporting account may fetch an incident's photo
+        Incident incident = findVisibleIncident(session, loadIncidentData(), String.valueOf(id));
+
         // Photos of private incidents are only served to admins
         if (!AuthenticationController.isAdminSession(session)
-                && findIncident(loadIncidentData(), String.valueOf(id)).hideInfo()) {
+                && incident.hideInfo()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
@@ -366,6 +457,9 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
+        if (!AuthenticationController.isAdminSession(session)) {
+            return "redirect:/incident";
+        }
 
         httpSession.setAttribute("keyword", keyword.trim());
         httpSession.setAttribute("vehicleMake", vehicleMake.trim());
@@ -379,15 +473,27 @@ public class WebController {
         return "redirect:/reports?limit=" + limit; 
     }
 
+    /**
+     * The calendar's range arrives as start/stop (inclusive ISO dates) or
+     * allTime=true. It is kept in the session like the other filters so the
+     * page buttons keep it; with no range chosen yet the 1st of the current
+     * month through today is used, matching the calendar's default.
+     */
     @GetMapping({"/reports"})
-    public String reports(@CookieValue(value = "SESSION", required = false) String session, 
-                        @RequestParam(defaultValue = "1") int pageNum, 
-                        @RequestParam(defaultValue = "10") int limit, 
-                        HttpSession httpSession, Model model) { 
+    public String reports(@CookieValue(value = "SESSION", required = false) String session,
+                        @RequestParam(defaultValue = "1") int pageNum,
+                        @RequestParam(defaultValue = "10") int limit,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate stop,
+                        @RequestParam(defaultValue = "false") boolean allTime,
+                        HttpSession httpSession, Model model) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        if (limit <= 0) limit = 10; 
+        if (!AuthenticationController.isAdminSession(session)) {
+            return "redirect:/incident";
+        }
+        if (limit <= 0) limit = 10;
 
 
         String keyword = (String) httpSession.getAttribute("keyword");
@@ -401,7 +507,30 @@ public class WebController {
         String licensePlate = (String) httpSession.getAttribute("licensePlate");
         String location = (String) httpSession.getAttribute("location");
 
+        if (allTime) {
+            httpSession.setAttribute("rangeAllTime", true);
+            httpSession.removeAttribute("rangeStart");
+            httpSession.removeAttribute("rangeStop");
+        } else if (start != null && stop != null) {
+            httpSession.setAttribute("rangeAllTime", false);
+            httpSession.setAttribute("rangeStart", start.isAfter(stop) ? stop : start);
+            httpSession.setAttribute("rangeStop", start.isAfter(stop) ? start : stop);
+        }
+        boolean rangeAllTime = Boolean.TRUE.equals(httpSession.getAttribute("rangeAllTime"));
+        LocalDate rangeStart = (LocalDate) httpSession.getAttribute("rangeStart");
+        LocalDate rangeStop = (LocalDate) httpSession.getAttribute("rangeStop");
+        if (!rangeAllTime && (rangeStart == null || rangeStop == null)) {
+            // Current month so far, matching the calendar's default
+            rangeStop = LocalDate.now();
+            rangeStart = rangeStop.withDayOfMonth(1);
+        }
+        // stop is inclusive, so include everything up to the start of the following day
+        LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();
+        LocalDateTime rangeUntil = rangeAllTime ? null : rangeStop.plusDays(1).atStartOfDay();
+
         List<Incident> filteredIncidents = loadIncidentData().incidents().stream()
+                .filter(incident -> rangeFrom == null
+                        || (!incident.createdTime().isBefore(rangeFrom) && incident.createdTime().isBefore(rangeUntil)))
                 .filter(incident -> keywordFilter(incident, keyword))
                 .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                 .filter(incident -> yearFilter(incident, startYear, endYear))
@@ -421,8 +550,8 @@ public class WebController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("currentPage", Math.min(pageNum, totalPages));
         model.addAttribute("pageButtons", pageButtons(Math.min(pageNum, totalPages), totalPages));
-        model.addAttribute("vehicleMakes", db.getAllVehicleMakes());
-        model.addAttribute("vehicleModels", db.getAllVehicleModels(vehicleMake));
+        model.addAttribute("vehicleMakes", db != null ? db.getAllVehicleMakes() : List.of());
+        model.addAttribute("vehicleModels", db != null ? db.getAllVehicleModels(vehicleMake) : List.of());
         model.addAttribute("keyword", keyword);
         model.addAttribute("vehicleMake", vehicleMake);
         model.addAttribute("vehicleModel", vehicleModel);
@@ -431,8 +560,12 @@ public class WebController {
         model.addAttribute("endYear", endYear);
         model.addAttribute("licensePlate", licensePlate);
         model.addAttribute("location", location);
+        // Lets the calendar show the range this page was filtered by
+        model.addAttribute("rangeAllTime", rangeAllTime);
+        model.addAttribute("rangeStart", rangeAllTime ? null : rangeStart.toString());
+        model.addAttribute("rangeStop", rangeAllTime ? null : rangeStop.toString());
 
-        return "reportsView"; 
+        return "reportsView";
     }
 
     @PostMapping("/reports/export") @ResponseBody 
@@ -486,8 +619,8 @@ public class WebController {
     @GetMapping({"/api/models"}) @ResponseBody
     public List<String> vehicleModels(@CookieValue(value = "SESSION", required = false) String session, 
                         @RequestParam(defaultValue = "") String vehicleMake) {
-        if (!AuthenticationController.isValidSession(session)) { 
-            return List.of(); 
+        if (!AuthenticationController.isAdminSession(session) || db == null) {
+            return List.of();
         }
 
         return db.getAllVehicleModels(vehicleMake);

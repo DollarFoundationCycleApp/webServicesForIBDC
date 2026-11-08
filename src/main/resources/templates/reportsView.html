@@ -285,6 +285,41 @@
         </script>
 
         <script>
+            // Reports are filtered and paged on the server, so a new calendar range reloads the page with it.
+            // The range the page was built with is announced once on load and is ignored.
+            (function () {
+                const dateRange = document.getElementById('date-range');
+                const shownStart = dateRange.dataset.rangeStart || null;
+                const shownStop = dateRange.dataset.rangeStop || null;
+
+                function isoDate(date) {
+                    if (date === null) {
+                        return null;
+                    }
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return date.getFullYear() + '-' + month + '-' + day;
+                }
+
+                document.addEventListener('daterangechange', function (event) {
+                    const start = isoDate(event.detail.startDate);
+                    const stop = isoDate(event.detail.stopDate);
+                    if (start === shownStart && stop === shownStop) {
+                        return;
+                    }
+                    const params = new URLSearchParams({ limit: document.querySelector('input[name="limit"]').value });
+                    if (start === null) {
+                        params.set('allTime', 'true');
+                    } else {
+                        params.set('start', start);
+                        params.set('stop', stop);
+                    }
+                    window.location.href = '/reports?' + params.toString();
+                });
+            })();
+        </script>
+
+        <script>
             let startYear = [[${startYear}]];
             let endYear = [[${endYear}]];
             

@@ -5,6 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -258,7 +259,7 @@ public class DatabaseCommunicationContext {
     public List<Map<String, Object>> getAllIncidents(int limit, int offset) {
         List<Map<String, Object>> incidents = new ArrayList<>();
 
-        String sql = "SELECT i.incident_id, i.device_event_id, i.timestamp_ms, i.latitude, "
+        String sql = "SELECT i.incident_id, i.user_id, i.device_event_id, i.timestamp_ms, i.latitude, "
                 + "i.longitude, i.accuracy_meters, i.distance_cm, i.time_offset_ms, i.is_anonymized, "
                 + "i.additional_comments, v.license_plate, v.state_or_region, v.vehicle_make, v.vehicle_model, v.vehicle_color "
                 + "FROM incidents i "
@@ -275,6 +276,7 @@ public class DatabaseCommunicationContext {
                 while (rs.next()) {
                     Map<String, Object> incident = new HashMap<>();
                     incident.put("incident_id", rs.getLong("incident_id"));
+                    incident.put("user_id", rs.getString("user_id"));
                     incident.put("device_event_id", rs.getInt("device_event_id"));
                     incident.put("timestamp_ms", rs.getLong("timestamp_ms"));
                     incident.put("latitude", rs.getDouble("latitude"));
@@ -368,6 +370,74 @@ public class DatabaseCommunicationContext {
         }
 
         return photos;
+    }
+
+    public enum CreateUserResult {
+        CREATED,
+        DUPLICATE,
+        ERROR
+    }
+
+    /**
+     * Look up an account by username or email. Used by the login flow so a
+     * user can sign in with either one.
+     *
+     * @return the user row, or null when no account matches or the database
+     *         cannot be reached.
+     */
+    public Map<String, Object> findUserByUsernameOrEmail(String usernameOrEmail) {
+        String sql = "SELECT user_id, username_or_email, email, password_hash, is_admin "
+                + "FROM users WHERE username_or_email = ? OR email = ? LIMIT 1";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, usernameOrEmail);
+            ps.setString(2, usernameOrEmail);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                Map<String, Object> user = new HashMap<>();
+                user.put("user_id", rs.getString("user_id"));
+                user.put("username_or_email", rs.getString("username_or_email"));
+                user.put("email", rs.getString("email"));
+                user.put("password_hash", rs.getString("password_hash"));
+                user.put("is_admin", rs.getBoolean("is_admin"));
+                return user;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching user: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Insert a new account. The username and email columns are unique, so a
+     * duplicate registration is reported instead of creating a second row.
+     */
+    public CreateUserResult createUser(String userId, String username, String email,
+                                       String passwordHash, boolean isAdmin) {
+        String sql = "INSERT INTO users (user_id, username_or_email, email, password_hash, is_admin) "
+                + "VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, userId);
+            ps.setString(2, username);
+            ps.setString(3, email);
+            ps.setString(4, passwordHash);
+            ps.setBoolean(5, isAdmin);
+            ps.executeUpdate();
+            return CreateUserResult.CREATED;
+        } catch (SQLIntegrityConstraintViolationException e) {
+            return CreateUserResult.DUPLICATE;
+        } catch (SQLException e) {
+            System.err.println("Error creating user: " + e.getMessage());
+            return CreateUserResult.ERROR;
+        }
     }
 
     public List<String> getAllVehicleMakes() {

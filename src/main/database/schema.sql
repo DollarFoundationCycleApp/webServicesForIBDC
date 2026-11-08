@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     distance_cm INT UNSIGNED,                       -- Distance to object from embedded sensor
     time_offset_ms INT UNSIGNED,                    -- Sensor offset time in ms
     is_anonymized TINYINT(1) DEFAULT 0 NOT NULL,    -- Flag denoting sensitive info stripping
-    additional_comments TEXT,                       -- Free text any signed-in user can edit on /incident
+    additional_comments TEXT,                       -- Free text only admins can edit on /incident
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_device_event_id (device_event_id),
@@ -79,13 +79,24 @@ CREATE TABLE IF NOT EXISTS vehicle_models (
 );
 
 -- User table for user authentication and incident reporting
+-- Usernames and emails are stored separately: the login form accepts either.
+-- Passwords are stored as SHA-256 hex hashes (see AuthenticationController).
 CREATE TABLE IF NOT EXISTS users (
-    user_id VARCHAR(255) PRIMARY KEY,                -- User ID from mobile app
-    username_or_email VARCHAR(255) UNIQUE NOT NULL,  -- Stored email/username
+    user_id VARCHAR(255) PRIMARY KEY,                -- User ID from mobile app or generated at sign-up
+    username_or_email VARCHAR(255) UNIQUE NOT NULL,  -- Username chosen at sign-up
+    email VARCHAR(255) UNIQUE NOT NULL,              -- Email address from sign-up
+    password_hash VARCHAR(255) NOT NULL,             -- SHA-256 hash of the password
     is_admin TINYINT(1) DEFAULT 0 NOT NULL,          -- Set true for Admin accounts
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Upgrading an existing database: the columns above were added for the web
+-- sign-up page. If the users table already exists, run these once instead of
+-- re-creating it:
+--   ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER username_or_email;
+--   ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '' AFTER email;
+--   ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
 
 -- Session tokens table for user authentication
 CREATE TABLE IF NOT EXISTS sessions (

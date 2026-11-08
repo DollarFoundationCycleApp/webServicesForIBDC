@@ -589,7 +589,21 @@ public class WebController {
         String licensePlate = (String) httpSession.getAttribute("licensePlate");
         String location = (String) httpSession.getAttribute("location");
 
+        boolean rangeAllTime = Boolean.TRUE.equals(httpSession.getAttribute("rangeAllTime"));
+        LocalDate rangeStart = (LocalDate) httpSession.getAttribute("rangeStart");
+        LocalDate rangeStop = (LocalDate) httpSession.getAttribute("rangeStop");
+        if (!rangeAllTime && (rangeStart == null || rangeStop == null)) {
+            // Current month so far, matching the calendar's default
+            rangeStop = LocalDate.now();
+            rangeStart = rangeStop.withDayOfMonth(1);
+        }
+        // stop is inclusive, so include everything up to the start of the following day
+        LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();
+        LocalDateTime rangeUntil = rangeAllTime ? null : rangeStop.plusDays(1).atStartOfDay();
+
         List<Incident> filteredIncidents = loadIncidentData().incidents().stream()
+                .filter(incident -> rangeFrom == null
+                        || (!incident.createdTime().isBefore(rangeFrom) && incident.createdTime().isBefore(rangeUntil)))
                 .filter(incident -> keywordFilter(incident, keyword))
                 .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                 .filter(incident -> yearFilter(incident, startYear, endYear))

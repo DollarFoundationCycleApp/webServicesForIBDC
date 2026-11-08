@@ -634,6 +634,7 @@ th {
     padding: 12px;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     cursor: default;
+    overflow: visible;
 }
 
 .filter-menu {
@@ -726,6 +727,43 @@ th {
 .filter-row input:focus {
     outline: none;
     border: 1px solid #ff6600;
+}
+
+.location-search {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.location-search input[name="location"] {
+    margin-bottom: 0px;
+}
+
+.location-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background-color: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.location-list div {
+    display: flex;
+    align-items: center;
+    min-height: 35px;
+    padding: 0 5px;
+    font-size: 0.85rem;
+}
+
+.location-list div:hover {
+    background-color: #fff4ea;
+    cursor: pointer;
+}
+
+.location-list.hidden {
+    display: none;
 }
 
 .filter-row button {

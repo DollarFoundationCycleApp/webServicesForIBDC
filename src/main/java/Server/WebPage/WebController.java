@@ -31,6 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 import Server.Controller.AuthenticationController;
 import Server.Model.DatabaseCommunicationContext;
 import Server.Model.Incident;
+import Server.Model.LocationModel;
 import jakarta.servlet.http.HttpSession;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -359,6 +360,7 @@ public class WebController {
                     @RequestParam (defaultValue = "-1") int startYear,
                     @RequestParam (defaultValue = "-1") int endYear,
                     @RequestParam (defaultValue = "") String licensePlate,
+                    @RequestParam (defaultValue = "") String location,
                     HttpSession httpSession) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
@@ -371,6 +373,7 @@ public class WebController {
         httpSession.setAttribute("startYear", startYear);
         httpSession.setAttribute("endYear", endYear);
         httpSession.setAttribute("licensePlate", licensePlate.trim());
+        httpSession.setAttribute("location", location.trim());
 
         return "redirect:/reports?limit=" + limit; 
     }
@@ -395,6 +398,7 @@ public class WebController {
         Integer endYearAtt = (Integer) httpSession.getAttribute("endYear");
         int endYear = endYearAtt == null ? -1 : endYearAtt;
         String licensePlate = (String) httpSession.getAttribute("licensePlate");
+        String location = (String) httpSession.getAttribute("location");
 
         List<Incident> allIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> keywordFilter(incident, keyword))
@@ -402,6 +406,8 @@ public class WebController {
                 .filter(incident -> yearFilter(incident, startYear, endYear))
                 .filter(incident -> licensePlate == null ? true : 
                             incident.licensePlate().toLowerCase().contains(licensePlate.toLowerCase()))
+                .filter(incident -> location == null ? true : true)
+                            //incident.location().toLowerCase().contains(location.toLowerCase()))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
@@ -423,6 +429,7 @@ public class WebController {
         model.addAttribute("startYear", startYear);
         model.addAttribute("endYear", endYear);
         model.addAttribute("licensePlate", licensePlate);
+        model.addAttribute("location", location);
 
         return "reportsView"; 
     }
@@ -435,6 +442,11 @@ public class WebController {
         }
 
         return db.getAllVehicleModels(vehicleMake);
+    }
+
+    @GetMapping({"/api/locations"}) @ResponseBody
+    public List<String> citySearch(@RequestParam String q) {
+        return LocationModel.filterCities(q);
     }
 
     private static boolean keywordFilter(Incident incident, String keyword) {

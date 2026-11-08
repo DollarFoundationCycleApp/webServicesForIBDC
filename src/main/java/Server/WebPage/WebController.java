@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
@@ -400,7 +401,7 @@ public class WebController {
         String licensePlate = (String) httpSession.getAttribute("licensePlate");
         String location = (String) httpSession.getAttribute("location");
 
-        List<Incident> allIncidents = loadIncidentData().incidents().stream()
+        List<Incident> filteredIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> keywordFilter(incident, keyword))
                 .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                 .filter(incident -> yearFilter(incident, startYear, endYear))
@@ -411,11 +412,11 @@ public class WebController {
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
-        int totalPages = Math.max(1, (int) Math.ceil(allIncidents.size() / (double) limit));
+        int totalPages = Math.max(1, (int) Math.ceil(filteredIncidents.size() / (double) limit));
         int from = (Math.min(pageNum, totalPages) - 1) * limit;
-        int to = Math.min(from + limit, allIncidents.size());
+        int to = Math.min(from + limit, filteredIncidents.size());
         
-        model.addAttribute("incidents", allIncidents.subList(from, to));
+        model.addAttribute("incidents", filteredIncidents.subList(from, to));
         model.addAttribute("limit", limit);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("currentPage", Math.min(pageNum, totalPages));
@@ -432,6 +433,54 @@ public class WebController {
         model.addAttribute("location", location);
 
         return "reportsView"; 
+    }
+
+    @PostMapping("/reports/export") @ResponseBody 
+    public List<Map<String, Object>> expoertIncidents(
+                        @CookieValue(value = "SESSION", required = false) String session, 
+                        @RequestParam(defaultValue = "false") boolean all,
+                        @RequestBody(required = false) List<String> incidentIds,
+                        HttpSession httpSession) {
+        if (!AuthenticationController.isValidSession(session)) { 
+            return List.of(); 
+        }
+
+        String keyword = (String) httpSession.getAttribute("keyword");
+        String vehicleMake = (String) httpSession.getAttribute("vehicleMake");
+        String vehicleModel = (String) httpSession.getAttribute("vehicleModel");
+        String vehicleColor = (String) httpSession.getAttribute("vehicleColor");
+        Integer startYearAtt = (Integer) httpSession.getAttribute("startYear");
+        int startYear = startYearAtt == null ? -1 : startYearAtt;
+        Integer endYearAtt = (Integer) httpSession.getAttribute("endYear");
+        int endYear = endYearAtt == null ? -1 : endYearAtt;
+        String licensePlate = (String) httpSession.getAttribute("licensePlate");
+        String location = (String) httpSession.getAttribute("location");
+
+        List<Incident> filteredIncidents = loadIncidentData().incidents().stream()
+                .filter(incident -> keywordFilter(incident, keyword))
+                .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
+                .filter(incident -> yearFilter(incident, startYear, endYear))
+                .filter(incident -> licensePlate == null ? true : 
+                            incident.licensePlate().toLowerCase().contains(licensePlate.toLowerCase()))
+                .filter(incident -> location == null ? true : true)
+                            //incident.location().toLowerCase().contains(location.toLowerCase()))
+                .sorted(Comparator.comparing(Incident::createdTime).reversed())
+                .toList();
+        
+        return filteredIncidents.stream()
+                .filter(i -> all || incidentIds.contains(i.incidentId()))
+                .sorted(Comparator.comparing(Incident::createdTime).reversed())
+                .map(i -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("Incident ID", i.incidentId());
+                    row.put("Date", i.createdTime().format(DISPLAY_TIME));
+                    row.put("Location", i.latitude() + ", " + i.longitude());
+                    row.put("Vehicle", i.vehicleColor() + " " + i.vehicleYear() + 
+                        " " + i.vehicleMake() + " " + i.vehicleModel());
+                    row.put("License Plate", i.licensePlate());
+                    row.put("Driver Present", i.driverPresent() ? "Yes" : "No");
+                    return row;
+                }).toList();
     }
 
     @GetMapping({"/api/models"}) @ResponseBody

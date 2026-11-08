@@ -22,7 +22,7 @@
             </button>
 
             <div id="filter-popover" class="filter-popover" popover>
-                <div class="filter-header">
+                <div class="popover-header">
                     <label class="advanced-filters">Advanced Filters</label>
                     <button class="close-button" popovertarget="filter-popover" aria-label="Close">&times;</button>
                 </div>
@@ -108,8 +108,36 @@
                 <input type="hidden" name="limit" th:value="${limit}">
                 <button class="reset-button" type="submit" aria-label="Reset">
                     <img class="icon" th:src="@{/icons/refresh.svg}" alt="">
-                    Reset</button>
+                    Reset
+                </button>
             </form>
+
+            <button id="clear-button" class="clear-button" aria-label="Clear">
+                Clear Selection
+            </button> 
+
+            <button class="export-button" popovertarget="export-popover" aria-label="Export">
+                Export &#9660;
+            </button> 
+
+            <div id="export-popover" class="export-popover" popover>
+                <div class="popover-header">
+                    <label class="export-options" style="font-size: medium;">Export Options</label>
+                    <button class="close-button" popovertarget="export-popover" aria-label="Close">&times;</button>
+                </div>
+
+                <button class="export-all-button" onclick="exportTable(true)" aria-label="Export">
+                <img class="icon" th:src="@{/icons/export.svg}" alt="">
+                Export All
+                </button> 
+
+                <button class="export-selected-button" onclick="exportTable(false)" aria-label="Export">
+                <img class="icon" th:src="@{/icons/export.svg}" alt="">
+                Export Selected
+                </button> 
+            </div>
+
+
         </div>
 
 
@@ -140,7 +168,7 @@
                 <tr th:if="${#lists.isEmpty(incidents)}">
                     <td colspan="8">No incidents match your search.</td>
                 </tr>
-                <tr class="incident-row" th:each="incident : ${incidents}">
+                <tr class="incident-row" th:each="incident : ${incidents}" th:data-id="${incident.incidentId}">
                     <td><input type="checkbox"></td>
                     <td>
                         <a class="incident-link" th:href="@{/incident/{id}(id=${incident.incidentId})}"
@@ -179,6 +207,9 @@
         </div>
 
         <script>
+            const selectedIncidents = new Set(JSON.parse(sessionStorage.getItem('selectedIncidents') || '[]'))
+
+            const clearSelection = document.getElementById('clear-button');
             const selectAllCheckbox = document.getElementById('all-incidents');
             const rows = document.querySelectorAll('.incident-row');
 
@@ -190,27 +221,40 @@
             
             
             rows.forEach(row => {
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                checkbox.checked = selectedIncidents.has(row.dataset.id);
+
                 row.addEventListener('click', function (event) {
-                    const checkbox = this.querySelector('input[type="checkbox"]');
                     if (event.target !== checkbox && event.target !== this.querySelector('.incident-link')) {
                         checkbox.checked = !checkbox.checked;
-                    }
 
-                    if (rows.length === document.querySelectorAll('.incident-row input[type="checkbox"]:checked').length) {
-                        selectAllCheckbox.checked = true;
-                    } else {
-                        selectAllCheckbox.checked = false;
+                        if (checkbox.checked) selectedIncidents.add(this.dataset.id);
+                        else selectedIncidents.delete(this.dataset.id);
+                        sessionStorage.setItem('selectedIncidents', JSON.stringify([...selectedIncidents]))
+                        
+                        if (rows.length === document.querySelectorAll('.incident-row input[type="checkbox"]:checked').length) {
+                            selectAllCheckbox.checked = true;
+                        } else {
+                            selectAllCheckbox.checked = false;
+                        }
                     }
                 });
             });
 
-            document.getElementById('all-incidents').addEventListener('click', function (event) {
-                const checkbox = this.querySelector('input[type="checkbox"]');
-                document.querySelectorAll('.incident-row').forEach(row => {
-                    const rowCheckbox = row.querySelector('input[type="checkbox"]');
-                    rowCheckbox.checked = checkbox.checked;
+            clearSelection.addEventListener('click', function () {
+                sessionStorage.removeItem('selectedIncidents');
+                rows.forEach(row => {
+                    const checkbox = row.querySelector('input[type="checkbox"]');
+                    checkbox.checked = false;
+                    selectAllCheckbox.checked = false;
                 });
             });
+
+            document.querySelectorAll('form').forEach(form =>
+                form.addEventListener('submit', function () {   
+                    sessionStorage.removeItem('selectedIncidents');
+                })
+            );
         </script>
 
         <script>

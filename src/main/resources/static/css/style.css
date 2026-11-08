@@ -46,6 +46,15 @@ body {
     display: block;
     flex-shrink: 0;
 }
+
+.white-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    flex-shrink: 0;
+    filter: brightness(0) invert(1);
+}
+
 .icon-placeholder {
     width: 22px;
     height: 22px;
@@ -566,6 +575,7 @@ th {
 .keyword-filter-wrap {
     display: flex;
     align-items: center;
+    height: 36px;
     gap: 8px;
     width: 500px;
     padding: 6px 12px;
@@ -588,19 +598,18 @@ th {
     color: #333333;
 }
 
-.keyword-filter-wrap button {
-    display: flex;
-    align-items: center;
+.filter-items .keyword-filter-wrap button {
     padding: 0;
     border: none;
     background: none;
-    cursor: pointer;
 }
 
-/* Reports Filter and Reset buttons */
-.reset-button, .filter-button {
+/* Filter Item Buttons */
+.filter-items button,
+.export-popover button {
     display: flex;
     align-items: center;
+    height: 36px;
     gap: 8px;
     padding: 6px 12px;
     border: 1px solid #d8d8d8;
@@ -611,8 +620,43 @@ th {
     cursor: pointer;
 }
 
-.reset-button:hover, .filter-button:hover {
+.filter-items button:hover {
     border-color: #ff6600;
+}
+
+.filter-items .clear-button {
+    margin-left: auto;
+}
+
+.filter-items .export-button {
+    color: white;
+    font-weight: bold;
+    background-color: #ff6600;
+    border: none;
+    anchor-name: --export-button;
+}
+
+.export-popover {
+    position-anchor: --export-button;
+    top: calc(anchor(bottom) + 6px);
+    right: calc(anchor(right));
+    left: auto;
+    bottom: auto;
+    background-color: #ffffff;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    cursor: default;
+    overflow: visible;
+}
+
+.export-popover button{
+    margin-bottom: 6px;
+}
+
+.filter-items .export-button:hover {
+    border: 1px solid #000000;
 }
 
 .filter-button {
@@ -632,7 +676,7 @@ th {
     border: 1px solid #d8d8d8;
     border-radius: 4px;
     padding: 12px;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     cursor: default;
     overflow: visible;
 }
@@ -646,19 +690,24 @@ th {
     grid-column: 1 / -1;
 }
 
-.filter-header {
+.popover-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     margin-bottom: 12px;
 }
 
-.filter-header label {
+.popover-header label {
     font-size: 1.25rem;
     font-weight: bold;
 }
 
-.close-button {
+.popover-header .close-button {
+    height: auto;
+    margin: 0;
+    transform: translatex(5px);
+    padding: 0 4px;
+    line-height: 1;
     border: none;
     background: none;
     font-size: 1.5rem;
@@ -771,18 +820,16 @@ th {
     height: 38px;
 }
 
-.apply-filters-button {
+.filter-row .apply-filters-button {
     font-size: 1rem;
     width : 100%;
     color: white;
     font-weight: bold;
-    border-radius: 4px;
     background-color: #ff6600;
     border: none;
 }
 
-.apply-filters-button:hover {
-    cursor: pointer;
+.filter-row .apply-filters-button:hover {
     border: 1px solid #000000;
 }
 

@@ -91,7 +91,7 @@ public class DatabaseCommunicationContext {
                 ps.setDouble(5, location.getLongitude());
                 ps.setFloat(6, location.getAccuracyMeters());
                 ps.setInt(7, incident.getDistanceCm());
-                ps.setInt(8, incident.getTimeOffsetMs());
+                ps.setFloat(8, incident.getTimeOffsetMs());
                 ps.setBoolean(9, incident.getIsAnonymized());
                 ps.executeUpdate();
 
@@ -240,7 +240,7 @@ public class DatabaseCommunicationContext {
                     incident.put("longitude", rs.getDouble("longitude"));
                     incident.put("accuracy_meters", rs.getFloat("accuracy_meters"));
                     incident.put("distance_cm", rs.getInt("distance_cm"));
-                    incident.put("time_offset_ms", rs.getInt("time_offset_ms"));
+                    incident.put("time_offset_ms", rs.getFloat("time_offset_ms"));
                     incident.put("is_anonymized", rs.getBoolean("is_anonymized"));
                     incidents.add(incident);
                 }
@@ -283,7 +283,7 @@ public class DatabaseCommunicationContext {
                     incident.put("longitude", rs.getDouble("longitude"));
                     incident.put("accuracy_meters", rs.getFloat("accuracy_meters"));
                     incident.put("distance_cm", rs.getInt("distance_cm"));
-                    incident.put("time_offset_ms", rs.getInt("time_offset_ms"));
+                    incident.put("time_offset_ms", rs.getFloat("time_offset_ms"));
                     incident.put("is_anonymized", rs.getBoolean("is_anonymized"));
                     incident.put("additional_comments", rs.getString("additional_comments"));
                     incident.put("license_plate", rs.getString("license_plate"));

@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     longitude DECIMAL(10,7),
     accuracy_meters DECIMAL(8,2),                   -- Accuracy in meters
     distance_cm INT UNSIGNED,                       -- Distance to object from embedded sensor
-    time_offset_ms INT UNSIGNED,                    -- Sensor offset time in ms
+    time_offset_ms FLOAT UNSIGNED,                    -- Sensor offset time in ms
     is_anonymized TINYINT(1) DEFAULT 0 NOT NULL,    -- Flag denoting sensitive info stripping
     additional_comments TEXT,                       -- Free text only admins can edit on /incident
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

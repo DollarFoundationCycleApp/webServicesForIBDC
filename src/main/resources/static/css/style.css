@@ -1142,3 +1142,56 @@ a  {
     font-size: 0.8rem;
     color: #555555;
 }
+
+/* Settings page */
+.settings-card {
+    max-width: 480px;
+    margin: 24px 0;
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.settings-card h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.settings-current {
+    margin-bottom: 16px;
+    color: #444;
+}
+
+.settings-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.settings-row {
+    display: flex;
+    gap: 10px;
+}
+
+.settings-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.settings-row button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #ff6600;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.settings-row button:hover {
+    background: #e65c00;
+}

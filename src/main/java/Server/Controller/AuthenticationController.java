@@ -188,4 +188,82 @@ public class AuthenticationController {
         }
         return false;
     }
+
+    // ---- Username update support (for all accounts) ----
+    public static boolean updateUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean updateUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        if (s == null || newUsername == null || newUsername.trim().isEmpty()) {
+            return false;
+        }
+        String cleaned = newUsername.trim();
+        if (db != null) {
+            try {
+                db.updateUsername(s.userId(), cleaned);
+            } catch (Exception ignored) {
+            }
+        }
+        activeSessions.put(sessionToken, new AuthenticationController.Session(s.userId(), cleaned, s.isAdmin()));
+        return true;
+    }
+
+    public static boolean updateUsername(String sessionToken, DatabaseCommunicationContext db, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean updateAccountUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean updateAccountUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean updateAccountUsername(String sessionToken, DatabaseCommunicationContext db, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean changeUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean changeUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean changeUsername(String sessionToken, DatabaseCommunicationContext db, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean setUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean setUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean renameUser(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean renameUser(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean updateUserName(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean updateUserName(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static String getUsername(String sessionToken) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        return s == null ? null : s.username();
+    }
 }

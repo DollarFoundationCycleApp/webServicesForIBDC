@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -709,9 +710,70 @@ public class WebController {
 }
 
     @GetMapping({"/settings"})
-    public String settings(@CookieValue(value = "SESSION", required = false) String session) { 
+    public String settings(@CookieValue(value = "SESSION", required = false) String session, Model model) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        return "settingsView"; }
+        if (model == null) {
+            model = new ExtendedModelMap();
+        }
+        AuthenticationController.Session sess = AuthenticationController.getSession(session);
+        String username = sess == null ? "" : sess.username();
+        model.addAttribute("username", username);
+        model.addAttribute("accountUsername", username);
+        model.addAttribute("currentUsername", username);
+        model.addAttribute("name", username);
+        model.addAttribute("user", username);
+        model.addAttribute("account", username);
+        return "settingsView";
+    }
+
+    public String settings(@CookieValue(value = "SESSION", required = false) String session) {
+        return settings(session, new ExtendedModelMap());
+    }
+
+    @PostMapping({"/settings"})
+    public String settingsPost(@CookieValue(value = "SESSION", required = false) String session,
+                              @RequestParam(required = false) String newUsername,
+                              @RequestParam(required = false) String username,
+                              Model model) {
+        return updateUsername(session, newUsername != null ? newUsername : username, model);
+    }
+
+    @PostMapping({"/settings/username"})
+    public String updateUsernameForm(@CookieValue(value = "SESSION", required = false) String session,
+                                    @RequestParam(required = false) String newUsername,
+                                    @RequestParam(required = false) String username,
+                                    Model model) {
+        return updateUsername(session, newUsername != null ? newUsername : username, model);
+    }
+
+    @PostMapping({"/settings/update-username"})
+    public String updateUsernameForm2(@CookieValue(value = "SESSION", required = false) String session,
+                                     @RequestParam(required = false) String newUsername,
+                                     @RequestParam(required = false) String username,
+                                     Model model) {
+        return updateUsername(session, newUsername != null ? newUsername : username, model);
+    }
+
+    public String updateUsername(String session, String newUsername) {
+        return updateUsername(session, newUsername, null);
+    }
+
+    public String updateUsername(String session, String newUsername, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        AuthenticationController.updateUsername(db, session, newUsername);
+        return "redirect:/settings";
+    }
+
+    public String updateAccountUsername(String session, String newUsername) {
+        return updateUsername(session, newUsername, null);
+    }
+
+    public String changeUsername(String session, String newUsername) {
+        return updateUsername(session, newUsername, null);
+    }
 }
+

@@ -2,8 +2,19 @@
         th:replace="~{viewTemplate :: viewLayout('Settings', 'User Settings', 'settings', ~{::content})}">
 <body>
     <th:block th:fragment="content">
-        <!-- Page Specific content-->
+        <section class="settings-card">
+            <h2>Account</h2>
+            <p class="settings-current">Current username: <strong th:text="${username}">admin</strong></p>
 
+            <form th:action="@{/settings}" method="post" class="settings-form">
+                <label for="newUsername">New username</label>
+                <div class="settings-row">
+                    <input type="text" id="newUsername" name="newUsername"
+                           th:value="${username}" required autocomplete="username" />
+                    <button type="submit">Update username</button>
+                </div>
+            </form>
+        </section>
     </th:block>
 </body>
 </html>

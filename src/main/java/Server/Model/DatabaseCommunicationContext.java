@@ -500,6 +500,47 @@ public class DatabaseCommunicationContext {
         }
     }
 
+    /**
+     * Update the username (username_or_email) for the given user id.
+     * Returns true if a row was updated.
+     */
+    public boolean updateUsername(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean updateUserUsername(String userId, String newUsername) {
+        String sql = "UPDATE users SET username_or_email = ? WHERE user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newUsername);
+            ps.setString(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating username: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean setUsername(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean renameUser(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean updateAccountUsername(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean updateUserName(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean updateUser(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
     private static void closeQuietly(Connection conn) {
         if (conn != null) {
             try {

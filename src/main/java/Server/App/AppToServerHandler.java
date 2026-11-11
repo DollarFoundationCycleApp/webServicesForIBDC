@@ -35,7 +35,7 @@ public class AppToServerHandler {
                         break;
                     case USER_AUTH_REQUEST:
                         UserAuthRequest authRequest = request.getUserAuthRequest();
-                        response = handleUserAuthentication(authRequest);
+                        response = handleUserAuthentication(authRequest, db);
                         break;
                     default:
                         response.setErrorResponse(ServerErrorResponse.newBuilder()
@@ -82,19 +82,29 @@ public class AppToServerHandler {
     }
 
     // Handles UserAuthRequest and returns a UserAuthResponse
-    private static ServerToApp.Builder handleUserAuthentication(UserAuthRequest request) {
+    private static ServerToApp.Builder handleUserAuthentication(UserAuthRequest request, DatabaseCommunicationContext db) {
         ServerToApp.Builder response = ServerToApp.newBuilder();
 
         String username = request.getUsernameOrEmail();
         String token = request.getAuthTokenOrHash();
 
-        String sessionToken = AuthenticationController.authenticateUserHash(username, token);
+        String sessionToken = AuthenticationController.authenticateUserHash(db, username, token);
+
+        String userId = username;
+        boolean isAdmin = false;
+        if (sessionToken != null) {
+            AuthenticationController.Session session = AuthenticationController.getSession(sessionToken);
+            if (session != null) {
+                userId = session.userId();
+                isAdmin = session.isAdmin();
+            }
+        }
 
         response.setUserAuthResponse(UserAuthResponse.newBuilder()
                 .setAuthenticated(sessionToken != null)
-                .setUserId(username)
+                .setUserId(userId)
                 .setSessionToken(sessionToken != null ? sessionToken : "")
-                .setIsAdmin(sessionToken != null));
+                .setIsAdmin(isAdmin));
 
         return response;
     }

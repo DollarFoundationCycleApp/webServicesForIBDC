@@ -27,6 +27,10 @@ import CycleSafety.Server.SCPBV020.OffenderVehicle;
  */
 public class DatabaseCommunicationContext {
 
+    public enum CreateUserResult {
+        CREATED, DUPLICATE, FAILED, UNAVAILABLE
+    }
+
     private final String dbHost;
     private final int dbPort;
     private final String dbName;
@@ -313,6 +317,61 @@ public class DatabaseCommunicationContext {
             } catch (SQLException ignored) {
                 // nothing we can do here
             }
+        }
+    }
+
+    /**
+     * Look up a user by username or email. Returns null when not found.
+     * Default implementation returns null (no database).
+     */
+    public Map<String, Object> findUserByUsernameOrEmail(String usernameOrEmail) {
+        return null;
+    }
+
+    /**
+     * Create a new user account. Default implementation reports unavailable.
+     */
+    public CreateUserResult createUser(String userId, String username, String email,
+                                      String passwordHash, boolean isAdmin) {
+        return CreateUserResult.UNAVAILABLE;
+    }
+
+    /**
+     * Update the username (username_or_email) for the given user id.
+     */
+    public boolean updateUsername(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean setUsername(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean renameUser(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean updateAccountUsername(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    public boolean updateUserName(String userId, String newUsername) {
+        return updateUserUsername(userId, newUsername);
+    }
+
+    /**
+     * Update the username (username_or_email) for the given user id.
+     */
+    public boolean updateUserUsername(String userId, String newUsername) {
+        String sql = "UPDATE users SET username_or_email = ? WHERE user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newUsername);
+            ps.setString(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating username: " + e.getMessage());
+            return false;
         }
     }
 

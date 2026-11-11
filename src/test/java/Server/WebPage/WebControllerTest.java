@@ -29,7 +29,7 @@ public class WebControllerTest {
     public void heatmapProvidesMapSettings() {
         ExtendedModelMap model = new ExtendedModelMap();
 
-        String session = AuthenticationController.authenticateUser(null, "admin", "password");
+        String session = AuthenticationController.authenticateUser("admin", "password");
 
         String view = new WebController(null).heatmap(session, model);
 

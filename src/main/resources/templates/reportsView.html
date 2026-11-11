@@ -175,7 +175,7 @@
                         th:text="${incident.incidentId}">N/A</a>
                     </td>
                     <td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}">N/A</td>
-                    <td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}">N/A</td>
+                    <td th:text="${incident.location}">N/A</td>
                     <td th:text="${incident.vehicleColor} + ' ' + ${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}">N/A</td>
                     <td th:text="${incident.licensePlate}">N/A</td>
                     <td th:text="${incident.driverPresent} ? 'Yes' : 'No'">No</td>

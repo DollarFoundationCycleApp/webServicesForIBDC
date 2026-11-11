@@ -25,6 +25,9 @@ dependencies {
     // MySQL JDBC Driver
     runtimeOnly 'com.mysql:mysql-connector-j:9.2.0'
 
+    // JSON
+    implementation 'org.json:json:20250517'
+
     // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

@@ -40,7 +40,7 @@
                 <table class="detail-table">
                     <tbody>
                         <tr><th>Reported</th><td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}"></td></tr>
-                        <tr><th>Location</th><td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}"></td></tr>
+                        <tr><th>Location</th><td th:text="${incident.location}"></td></tr>
                         <tr><th>Injury Severity</th><td th:text="${incident.injurySeverity}"></td></tr>
                         <tr><th>Vehicle</th><td th:text="${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}"></td></tr>
                         <tr><th>Vehicle Color</th><td th:text="${incident.vehicleColor}"></td></tr>

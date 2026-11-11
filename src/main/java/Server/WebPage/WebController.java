@@ -82,8 +82,28 @@ public class WebController {
 
     private static List<Incident> loadSampleIncidents() {
         try {
-            return List.copyOf(MAPPER.readValue(new ClassPathResource("/SampleIncidents.json").getInputStream(),
-                    SampleFile.class).incidents());
+            List<Incident> incidents = MAPPER.readValue(
+                    new ClassPathResource("/SampleIncidents.json").getInputStream(), SampleFile.class).incidents();
+            return incidents.stream()
+                    .map(incident -> new Incident(
+                            incident.incidentId(),
+                            incident.latitude(),
+                            incident.longitude(),
+                            DatabaseCommunicationContext.getCityState(incident.latitude(), incident.longitude()),
+                            incident.licensePlate(),
+                            incident.imageId(),
+                            incident.driverInformation(),
+                            incident.driverPresent(),
+                            incident.injurySeverity(),
+                            incident.additionalComments(),
+                            incident.vehicleMake(),
+                            incident.vehicleModel(),
+                            incident.vehicleColor(),
+                            incident.vehicleYear(),
+                            incident.createdTime(),
+                            incident.hideInfo(),
+                            incident.extraComment()))
+                    .toList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to load sample incidents", e);
         }
@@ -187,6 +207,7 @@ public class WebController {
                 String.valueOf(incidentId),
                 ((Number) row.get("latitude")).doubleValue(),
                 ((Number) row.get("longitude")).doubleValue(),
+                text(row.get("location")),
                 text(row.get("license_plate")),
                 "incident-" + incidentId,
                 "Unknown",
@@ -253,6 +274,7 @@ public class WebController {
                         fields.put("incidentId", incident.incidentId());
                         fields.put("latitude", incident.latitude());
                         fields.put("longitude", incident.longitude());
+                        fields.put("location", incident.location());
                         fields.put("injurySeverity", incident.injurySeverity());
                         fields.put("driverPresent", incident.driverPresent());
                         fields.put("vehicleMake", incident.vehicleMake());
@@ -536,8 +558,7 @@ public class WebController {
                 .filter(incident -> yearFilter(incident, startYear, endYear))
                 .filter(incident -> licensePlate == null ? true : 
                             incident.licensePlate().toLowerCase().contains(licensePlate.toLowerCase()))
-                .filter(incident -> location == null ? true : true)
-                            //incident.location().toLowerCase().contains(location.toLowerCase()))
+                .filter(incident -> location == null ? true : incident.location().toLowerCase().contains(location.toLowerCase()))
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList();
 
@@ -621,7 +642,7 @@ public class WebController {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("Incident ID", i.incidentId());
                     row.put("Date", i.createdTime().format(DISPLAY_TIME));
-                    row.put("Location", i.latitude() + ", " + i.longitude());
+                    row.put("Location", i.location());
                     row.put("Vehicle", i.vehicleColor() + " " + i.vehicleYear() + 
                         " " + i.vehicleMake() + " " + i.vehicleModel());
                     row.put("License Plate", i.licensePlate());

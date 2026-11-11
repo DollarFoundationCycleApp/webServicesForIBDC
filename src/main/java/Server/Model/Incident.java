@@ -6,6 +6,7 @@ public record Incident(
         String incidentId,
         double latitude,
         double longitude,
+        String location,
         String licensePlate,
         String imageId,
         String injurySeverity,
@@ -20,12 +21,12 @@ public record Incident(
         boolean hideInfo,
         String additionalComments) {
 
-        public Incident(String incidentId, double latitude, double longitude, String licensePlate,
-                        String imageId, String injurySeverity, boolean driverPresent,
-                        String driverInformation, String extraComment, String vehicleMake,
-                        String vehicleModel, String vehicleColor, int vehicleYear,
-                        LocalDateTime createdTime, boolean hideInfo) {
-                this(incidentId, latitude, longitude, licensePlate, imageId, injurySeverity, driverPresent,
+        public Incident(String incidentId, double latitude, double longitude, String location, 
+                        String licensePlate, String imageId, String injurySeverity, 
+                        boolean driverPresent, String driverInformation, String extraComment, 
+                        String vehicleMake, String vehicleModel, String vehicleColor, 
+                        int vehicleYear, LocalDateTime createdTime, boolean hideInfo) {
+                this(incidentId, latitude, longitude, location, licensePlate, imageId, injurySeverity, driverPresent,
                         driverInformation, extraComment, vehicleMake, vehicleModel, vehicleColor, vehicleYear,
                         createdTime, hideInfo, "");
         }
@@ -34,7 +35,7 @@ public record Incident(
         public static Incident hideInfo(Incident incident) {
                 boolean hidden = incident.hideInfo();
                 return new Incident(
-                        incident.incidentId(), incident.latitude(), incident.longitude(),
+                        incident.incidentId(), incident.latitude(), incident.longitude(), incident.location(),
                         hidden ? null : incident.licensePlate(), hidden ? null : incident.imageId(),
                         incident.injurySeverity(), incident.driverPresent(),
                         hidden ? null : incident.driverInformation(), hidden ? null : incident.extraComment(),

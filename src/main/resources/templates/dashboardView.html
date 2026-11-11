@@ -59,7 +59,7 @@
                     <tbody>
                         <tr th:each="incident : ${incidents}" th:data-href="@{/incident/{id}(id=${incident.incidentId})}" th:data-created="${incident.createdTime}" style="cursor: pointer">
                             <td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}">09/30/2026 4:44 PM</td>
-                            <td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}">33.4310, -111.9370</td>
+                            <td th:text="${incident.location}"></td>
                             <td th:text="${incident.vehicleColor} + ' ' + ${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}">Silver 2019 Toyota Camry</td>
                             <td th:text="${incident.injurySeverity}">Minor</td>
                             <td><span class="preview-placeholder"></span></td>

@@ -1,5 +1,11 @@
 package Server.Model;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import org.json.JSONObject;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -64,15 +70,13 @@ public class DatabaseCommunicationContext {
     public long storeIncident(String userId, Incident incident, List<IncidentPhoto> photos,
                               OffenderVehicle vehicle) {
         String incidentSql = "INSERT INTO incidents (device_event_id, user_id, timestamp_ms, "
-                + "latitude, longitude, accuracy_meters, distance_cm, time_offset_ms, is_anonymized) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "latitude, longitude, location, accuracy_meters, distance_cm, time_offset_ms, is_anonymized) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         String photoSql = "INSERT INTO incident_photos (incident_id, image_index, format, "
                 + "image_data, contains_sensitive_data) VALUES (?, ?, ?, ?, ?)";
         String vehicleSql = "INSERT INTO offender_vehicles (incident_id, license_plate, "
                 + "state_or_region, vehicle_make, vehicle_model, vehicle_color) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
-        String vehicleMakeIdSql = "SELECT make_id FROM vehicle_makes WHERE make_name = ?";
-        String vehicleModelSql = "INSERT IGNORE INTO vehicle_models (make_id, model_name) VALUES (?, ?)";
 
         Connection conn = null;
         try {
@@ -82,6 +86,8 @@ public class DatabaseCommunicationContext {
             int deviceEventId = incident.getDeviceEventId();
             Location location = incident.getLocation();
 
+            String cityState = getCityState(location.getLatitude(), location.getLongitude());
+
             long incidentId;
             try (PreparedStatement ps = conn.prepareStatement(incidentSql, Statement.RETURN_GENERATED_KEYS)) {
                 ps.setInt(1, deviceEventId);
@@ -89,10 +95,11 @@ public class DatabaseCommunicationContext {
                 ps.setLong(3, incident.getTimestampMs());
                 ps.setDouble(4, location.getLatitude());
                 ps.setDouble(5, location.getLongitude());
-                ps.setFloat(6, location.getAccuracyMeters());
-                ps.setInt(7, incident.getDistanceCm());
-                ps.setFloat(8, incident.getTimeOffsetMs());
-                ps.setBoolean(9, incident.getIsAnonymized());
+                ps.setString(6, cityState);
+                ps.setFloat(7, location.getAccuracyMeters());
+                ps.setInt(8, incident.getDistanceCm());
+                ps.setFloat(9, incident.getTimeOffsetMs());
+                ps.setBoolean(10, incident.getIsAnonymized());
                 ps.executeUpdate();
 
                 try (ResultSet keys = ps.getGeneratedKeys()) {
@@ -478,6 +485,42 @@ public class DatabaseCommunicationContext {
         }
 
         return models;
+    }
+
+    public static String getCityState(double latitude, double longitude) {
+        String cityState = "";
+
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=" + longitude + "&y=" + latitude + "&benchmark=4&vintage=4&format=json"))
+                .build();
+                HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+                
+                if(response.statusCode() == 200) {
+                    JSONObject responseBody = new JSONObject(response.body());
+
+                    String city = responseBody.getJSONObject("result")
+                        .getJSONObject("geographies")
+                        .getJSONArray("Incorporated Places").getJSONObject(0)
+                        .getString("BASENAME");
+
+                    String state = responseBody.getJSONObject("result")
+                        .getJSONObject("geographies")
+                        .getJSONArray("States").getJSONObject(0)
+                        .getString("STUSAB");
+
+                    cityState = city + ", " + state;
+
+                } else {
+                    System.out.println("HTTP ERROR: " + response.statusCode());
+                }
+        } catch (Exception e) {
+            System.out.println("Error getting location: " + e.getMessage());
+        }
+
+        return cityState;
     }
 
 

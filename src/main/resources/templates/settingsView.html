@@ -3,7 +3,22 @@
 <body>
     <th:block th:fragment="content">
         <!-- Page Specific content-->
+        <section class="settings-section">
+            <h2>Account</h2>
+            <p>Current username: <span th:text="${username}">admin</span></p>
 
+            <form th:action="@{/settings/username}" method="post" class="settings-form">
+                <label for="newUsername">New username</label>
+                <input type="text" id="newUsername" name="newUsername" th:value="${username}" required />
+                <button type="submit">Update username</button>
+            </form>
+
+            <form th:action="@{/settings}" method="post" class="settings-form">
+                <label for="username">Account user name</label>
+                <input type="text" id="username" name="username" th:value="${username}" />
+                <button type="submit">Save</button>
+            </form>
+        </section>
     </th:block>
 </body>
 </html>

@@ -386,7 +386,7 @@ public class DatabaseCommunicationContext {
      *         cannot be reached.
      */
     public Map<String, Object> findUserByUsernameOrEmail(String usernameOrEmail) {
-        String sql = "SELECT user_id, username_or_email, email, password_hash, is_admin "
+        String sql = "SELECT user_id, username_or_email, full_name, email, password_hash, is_admin "
                 + "FROM users WHERE username_or_email = ? OR email = ? LIMIT 1";
 
         try (Connection conn = getConnection();
@@ -402,6 +402,7 @@ public class DatabaseCommunicationContext {
                 Map<String, Object> user = new HashMap<>();
                 user.put("user_id", rs.getString("user_id"));
                 user.put("username_or_email", rs.getString("username_or_email"));
+                user.put("full_name", rs.getString("full_name"));
                 user.put("email", rs.getString("email"));
                 user.put("password_hash", rs.getString("password_hash"));
                 user.put("is_admin", rs.getBoolean("is_admin"));
@@ -419,17 +420,23 @@ public class DatabaseCommunicationContext {
      */
     public CreateUserResult createUser(String userId, String username, String email,
                                        String passwordHash, boolean isAdmin) {
-        String sql = "INSERT INTO users (user_id, username_or_email, email, password_hash, is_admin) "
-                + "VALUES (?, ?, ?, ?, ?)";
+        return createUser(userId, username, email, passwordHash, isAdmin, null);
+    }
+
+    public CreateUserResult createUser(String userId, String username, String email,
+                                       String passwordHash, boolean isAdmin, String fullName) {
+        String sql = "INSERT INTO users (user_id, username_or_email, full_name, email, password_hash, is_admin) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, userId);
             ps.setString(2, username);
-            ps.setString(3, email);
-            ps.setString(4, passwordHash);
-            ps.setBoolean(5, isAdmin);
+            ps.setString(3, fullName);
+            ps.setString(4, email);
+            ps.setString(5, passwordHash);
+            ps.setBoolean(6, isAdmin);
             ps.executeUpdate();
             return CreateUserResult.CREATED;
         } catch (SQLIntegrityConstraintViolationException e) {
@@ -539,6 +546,39 @@ public class DatabaseCommunicationContext {
 
     public boolean updateUser(String userId, String newUsername) {
         return updateUserUsername(userId, newUsername);
+    }
+
+    /**
+     * Update the display name (full_name) for the given user id.
+     * Returns true if a row was updated.
+     */
+    public boolean updateFullName(String userId, String newFullName) {
+        return updateUserFullName(userId, newFullName);
+    }
+
+    public boolean updateUserFullName(String userId, String newFullName) {
+        String sql = "UPDATE users SET full_name = ? WHERE user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newFullName);
+            ps.setString(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating full name: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean setFullName(String userId, String newFullName) {
+        return updateUserFullName(userId, newFullName);
+    }
+
+    public boolean updateAccountFullName(String userId, String newFullName) {
+        return updateUserFullName(userId, newFullName);
+    }
+
+    public boolean changeFullName(String userId, String newFullName) {
+        return updateUserFullName(userId, newFullName);
     }
 
     private static void closeQuietly(Connection conn) {

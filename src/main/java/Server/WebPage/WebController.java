@@ -98,6 +98,7 @@ public class WebController {
     public void addCurrentUser(@CookieValue(value = "SESSION", required = false) String session, Model model) {
         AuthenticationController.Session user = AuthenticationController.getSession(session);
         model.addAttribute("currentUsername", user != null ? user.username() : "");
+        model.addAttribute("currentFullName", user != null ? user.fullName() : "");
         model.addAttribute("currentUserIsAdmin", user != null && user.isAdmin());
     }
 
@@ -719,12 +720,16 @@ public class WebController {
         }
         AuthenticationController.Session sess = AuthenticationController.getSession(session);
         String username = sess == null ? "" : sess.username();
+        String fullName = sess == null ? "" : sess.fullName();
         model.addAttribute("username", username);
         model.addAttribute("accountUsername", username);
         model.addAttribute("currentUsername", username);
         model.addAttribute("name", username);
         model.addAttribute("user", username);
         model.addAttribute("account", username);
+        model.addAttribute("fullName", fullName);
+        model.addAttribute("accountFullName", fullName);
+        model.addAttribute("currentFullName", fullName);
         return "settingsView";
     }
 
@@ -736,8 +741,20 @@ public class WebController {
     public String settingsPost(@CookieValue(value = "SESSION", required = false) String session,
                               @RequestParam(required = false) String newUsername,
                               @RequestParam(required = false) String username,
+                              @RequestParam(required = false) String fullName,
                               Model model) {
-        return updateUsername(session, newUsername != null ? newUsername : username, model);
+        String result = updateUsername(session, newUsername != null ? newUsername : username, model);
+        if (!"redirect:/settings".equals(result)) {
+            return result;
+        }
+        if (fullName != null) {
+            AuthenticationController.updateFullName(db, session, fullName);
+        }
+        return "redirect:/settings";
+    }
+
+    public String settingsPost(String session, String newUsername, String username, Model model) {
+        return settingsPost(session, newUsername, username, null, model);
     }
 
     @PostMapping({"/settings/username"})
@@ -774,6 +791,54 @@ public class WebController {
 
     public String changeUsername(String session, String newUsername) {
         return updateUsername(session, newUsername, null);
+    }
+
+    @PostMapping({"/settings/fullname", "/settings/full-name"})
+    public String updateFullNameForm(@CookieValue(value = "SESSION", required = false) String session,
+                                    @RequestParam(required = false) String fullName,
+                                    @RequestParam(required = false) String newFullName,
+                                    Model model) {
+        return updateFullName(session, newFullName != null ? newFullName : fullName, model);
+    }
+
+    public String updateFullNameForm(String session, String fullName, Model model) {
+        return updateFullName(session, fullName, model);
+    }
+
+    @PostMapping({"/settings/update-fullname"})
+    public String updateFullNameForm2(@CookieValue(value = "SESSION", required = false) String session,
+                                     @RequestParam(required = false) String fullName,
+                                     @RequestParam(required = false) String newFullName,
+                                     Model model) {
+        return updateFullName(session, newFullName != null ? newFullName : fullName, model);
+    }
+
+    public String updateFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String updateFullName(String session, String newFullName, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        AuthenticationController.updateFullName(db, session, newFullName);
+        return "redirect:/settings";
+    }
+
+    public String updateAccountFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String changeFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String setFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String saveFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
     }
 }
 

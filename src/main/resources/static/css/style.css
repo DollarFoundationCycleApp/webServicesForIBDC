@@ -1163,6 +1163,12 @@ a  {
     color: #444;
 }
 
+.settings-divider {
+    border: none;
+    border-top: 1px solid #ececec;
+    margin: 22px 0;
+}
+
 .settings-form label {
     display: block;
     margin-bottom: 8px;

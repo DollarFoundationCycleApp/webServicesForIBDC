@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS vehicle_models (
 CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(255) PRIMARY KEY,                -- User ID from mobile app or generated at sign-up
     username_or_email VARCHAR(255) UNIQUE NOT NULL,  -- Username chosen at sign-up
+    full_name VARCHAR(255) NULL,                     -- Display name chosen on the settings page
     email VARCHAR(255) UNIQUE NOT NULL,              -- Email address from sign-up
     password_hash VARCHAR(255) NOT NULL,             -- SHA-256 hash of the password
     is_admin TINYINT(1) DEFAULT 0 NOT NULL,          -- Set true for Admin accounts
@@ -94,7 +95,8 @@ CREATE TABLE IF NOT EXISTS users (
 -- Upgrading an existing database: the columns above were added for the web
 -- sign-up page. If the users table already exists, run these once instead of
 -- re-creating it:
---   ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER username_or_email;
+--   ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL AFTER username_or_email;
+--   ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER full_name;
 --   ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '' AFTER email;
 --   ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
 

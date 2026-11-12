@@ -204,6 +204,11 @@ public class WebController {
         model.addAttribute("incidents", loadIncidentData().incidents().stream()
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .toList());
+        long userCount = 0;
+        if (db != null) {
+            userCount = db.countUsers();
+        }
+        model.addAttribute("userCount", userCount);
         return "dashboardView";
     }
 

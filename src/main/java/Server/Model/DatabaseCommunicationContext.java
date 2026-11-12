@@ -268,6 +268,28 @@ public class DatabaseCommunicationContext {
     }
 
     /**
+     * Count the users registered in the users table.
+     *
+     * @return the number of users, or 0 if the query fails.
+     */
+    public long countUsers() {
+        String sql = "SELECT COUNT(*) FROM users";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+            return 0;
+        } catch (SQLException e) {
+            System.err.println("Error counting users: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Get all incident images for a specific incident_id.
      */
     public List<Map<String, Object>> getIncidentPhotos(long incidentId) {

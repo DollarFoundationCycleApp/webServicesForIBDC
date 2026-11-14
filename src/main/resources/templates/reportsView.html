@@ -126,12 +126,17 @@
                     <button class="close-button" popovertarget="export-popover" aria-label="Close">&times;</button>
                 </div>
 
-                <button class="export-all-button" onclick="exportTable(true)" aria-label="Export">
+                <button class="export-all-button" onclick="exportTable('all')" aria-label="Export">
                 <img class="icon" th:src="@{/icons/export.svg}" alt="">
                 Export All
                 </button> 
 
-                <button class="export-selected-button" onclick="exportTable(false)" aria-label="Export">
+                <button class="export-filtered-button" onclick="exportTable('filtered')" aria-label="Export">
+                <img class="icon" th:src="@{/icons/export.svg}" alt="">
+                Export Filtered
+                </button> 
+
+                <button class="export-selected-button" onclick="exportTable('selected')" aria-label="Export">
                 <img class="icon" th:src="@{/icons/export.svg}" alt="">
                 Export Selected
                 </button> 

@@ -89,7 +89,7 @@ public class WebController {
                             incident.incidentId(),
                             incident.latitude(),
                             incident.longitude(),
-                            DatabaseCommunicationContext.getCityState(incident.latitude(), incident.longitude()),
+                            LocationModel.nearestCity(incident.latitude(), incident.longitude()),
                             incident.licensePlate(),
                             incident.imageId(),
                             incident.injurySeverity(),
@@ -592,51 +592,17 @@ public class WebController {
     @PostMapping("/reports/export") @ResponseBody 
     public List<Map<String, Object>> expoertIncidents(
                         @CookieValue(value = "SESSION", required = false) String session, 
-                        @RequestParam(defaultValue = "false") boolean all,
+                        @RequestParam(defaultValue = "all") String selection,
                         @RequestBody(required = false) List<String> incidentIds,
                         HttpSession httpSession) {
         if (!AuthenticationController.isValidSession(session)) { 
             return List.of(); 
         }
 
-        String keyword = (String) httpSession.getAttribute("keyword");
-        String vehicleMake = (String) httpSession.getAttribute("vehicleMake");
-        String vehicleModel = (String) httpSession.getAttribute("vehicleModel");
-        String vehicleColor = (String) httpSession.getAttribute("vehicleColor");
-        Integer startYearAtt = (Integer) httpSession.getAttribute("startYear");
-        int startYear = startYearAtt == null ? -1 : startYearAtt;
-        Integer endYearAtt = (Integer) httpSession.getAttribute("endYear");
-        int endYear = endYearAtt == null ? -1 : endYearAtt;
-        String licensePlate = (String) httpSession.getAttribute("licensePlate");
-        String location = (String) httpSession.getAttribute("location");
+        List<Incident> filteredIncidents = new ArrayList<>();
 
-        boolean rangeAllTime = Boolean.TRUE.equals(httpSession.getAttribute("rangeAllTime"));
-        LocalDate rangeStart = (LocalDate) httpSession.getAttribute("rangeStart");
-        LocalDate rangeStop = (LocalDate) httpSession.getAttribute("rangeStop");
-        if (!rangeAllTime && (rangeStart == null || rangeStop == null)) {
-            // Current month so far, matching the calendar's default
-            rangeStop = LocalDate.now();
-            rangeStart = rangeStop.withDayOfMonth(1);
-        }
-        // stop is inclusive, so include everything up to the start of the following day
-        LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();
-        LocalDateTime rangeUntil = rangeAllTime ? null : rangeStop.plusDays(1).atStartOfDay();
-
-        List<Incident> filteredIncidents = loadIncidentData().incidents().stream()
-                .filter(incident -> rangeFrom == null
-                        || (!incident.createdTime().isBefore(rangeFrom) && incident.createdTime().isBefore(rangeUntil)))
-                .filter(incident -> keywordFilter(incident, keyword))
-                .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
-                .filter(incident -> yearFilter(incident, startYear, endYear))
-                .filter(incident -> licensePlate == null ? true : 
-                            incident.licensePlate().toLowerCase().contains(licensePlate.toLowerCase()))
-                .filter(incident -> location == null ? true : true)
-                            //incident.location().toLowerCase().contains(location.toLowerCase()))
-                .sorted(Comparator.comparing(Incident::createdTime).reversed())
-                .toList();
-        
-        return filteredIncidents.stream()
-                .filter(i -> all || incidentIds.contains(i.incidentId()))
+        if (selection.equals("all")) {
+            return loadIncidentData().incidents().stream()
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
                 .map(i -> {
                     Map<String, Object> row = new LinkedHashMap<>();
@@ -649,6 +615,53 @@ public class WebController {
                     row.put("Driver Present", i.driverPresent() ? "Yes" : "No");
                     return row;
                 }).toList();
+        } else {
+            String keyword = (String) httpSession.getAttribute("keyword");
+            String vehicleMake = (String) httpSession.getAttribute("vehicleMake");
+            String vehicleModel = (String) httpSession.getAttribute("vehicleModel");
+            String vehicleColor = (String) httpSession.getAttribute("vehicleColor");
+            Integer startYearAtt = (Integer) httpSession.getAttribute("startYear");
+            int startYear = startYearAtt == null ? -1 : startYearAtt;
+            Integer endYearAtt = (Integer) httpSession.getAttribute("endYear");
+            int endYear = endYearAtt == null ? -1 : endYearAtt;
+            String licensePlate = (String) httpSession.getAttribute("licensePlate");
+            String location = (String) httpSession.getAttribute("location");
+
+            boolean rangeAllTime = Boolean.TRUE.equals(httpSession.getAttribute("rangeAllTime"));
+            LocalDate rangeStart = (LocalDate) httpSession.getAttribute("rangeStart");
+            LocalDate rangeStop = (LocalDate) httpSession.getAttribute("rangeStop");
+            if (!rangeAllTime && (rangeStart == null || rangeStop == null)) {
+                // Current month so far, matching the calendar's default
+                rangeStop = LocalDate.now();
+                rangeStart = rangeStop.withDayOfMonth(1);
+            }
+            // stop is inclusive, so include everything up to the start of the following day
+            LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();
+            LocalDateTime rangeUntil = rangeAllTime ? null : rangeStop.plusDays(1).atStartOfDay();
+
+            return loadIncidentData().incidents().stream()
+                    .filter(i -> selection.equals("filtered") || incidentIds.contains(i.incidentId()))
+                    .filter(incident -> rangeFrom == null
+                            || (!incident.createdTime().isBefore(rangeFrom) && incident.createdTime().isBefore(rangeUntil)))
+                    .filter(incident -> keywordFilter(incident, keyword))
+                    .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
+                    .filter(incident -> yearFilter(incident, startYear, endYear))
+                    .filter(incident -> licensePlate == null ? true : 
+                                incident.licensePlate().toLowerCase().contains(licensePlate.toLowerCase()))
+                    .filter(incident -> location == null ? true : incident.location().toLowerCase().contains(location.toLowerCase()))
+                    .sorted(Comparator.comparing(Incident::createdTime).reversed())
+                    .map(i -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("Incident ID", i.incidentId());
+                    row.put("Date", i.createdTime().format(DISPLAY_TIME));
+                    row.put("Location", i.location());
+                    row.put("Vehicle", i.vehicleColor() + " " + i.vehicleYear() + 
+                        " " + i.vehicleMake() + " " + i.vehicleModel());
+                    row.put("License Plate", i.licensePlate());
+                    row.put("Driver Present", i.driverPresent() ? "Yes" : "No");
+                    return row;
+                }).toList();
+        }
     }
 
     @GetMapping({"/api/models"}) @ResponseBody

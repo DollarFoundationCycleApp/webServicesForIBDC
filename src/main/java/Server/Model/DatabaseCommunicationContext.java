@@ -581,6 +581,43 @@ public class DatabaseCommunicationContext {
         return updateUserFullName(userId, newFullName);
     }
 
+    /**
+     * Update the password hash for the given user id.
+     * Returns true if a row was updated.
+     */
+    public boolean updatePassword(String userId, String passwordHash) {
+        return updatePasswordHash(userId, passwordHash);
+    }
+
+    public boolean updatePasswordHash(String userId, String passwordHash) {
+        String sql = "UPDATE users SET password_hash = ? WHERE user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, passwordHash);
+            ps.setString(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating password: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean setPassword(String userId, String passwordHash) {
+        return updatePasswordHash(userId, passwordHash);
+    }
+
+    public boolean updateAccountPassword(String userId, String passwordHash) {
+        return updatePasswordHash(userId, passwordHash);
+    }
+
+    public boolean changePassword(String userId, String passwordHash) {
+        return updatePasswordHash(userId, passwordHash);
+    }
+
+    public boolean updateUserPassword(String userId, String passwordHash) {
+        return updatePasswordHash(userId, passwordHash);
+    }
+
     private static void closeQuietly(Connection conn) {
         if (conn != null) {
             try {

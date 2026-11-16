@@ -30,6 +30,17 @@
                     <button type="submit">Save full name</button>
                 </div>
             </form>
+
+            <hr class="settings-divider" />
+
+            <form th:action="@{/settings/password}" method="post" class="settings-form">
+                <label for="newPassword">New password</label>
+                <div class="settings-row">
+                    <input type="password" id="newPassword" name="newPassword"
+                           placeholder="At least 8 characters" required autocomplete="new-password" />
+                    <button type="submit">Update password</button>
+                </div>
+            </form>
         </section>
     </th:block>
 </body>

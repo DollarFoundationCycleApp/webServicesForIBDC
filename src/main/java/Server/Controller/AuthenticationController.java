@@ -351,4 +351,92 @@ public class AuthenticationController {
         AuthenticationController.Session s = getSession(sessionToken);
         return s == null ? null : s.fullName();
     }
+
+    // ---- Password update support (for all accounts) ----
+    public static boolean updatePassword(String sessionToken, String newPassword) {
+        return updatePassword((DatabaseCommunicationContext) null, sessionToken, newPassword);
+    }
+
+    public static boolean updatePassword(DatabaseCommunicationContext db, String sessionToken, String newPassword) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        if (s == null || newPassword == null || newPassword.trim().isEmpty()
+                || newPassword.trim().length() < MIN_PASSWORD_LENGTH) {
+            return false;
+        }
+        String hash = hashPassword(newPassword.trim());
+        if (db != null) {
+            try {
+                db.updatePassword(s.userId(), hash);
+            } catch (Exception ignored) {
+            }
+        }
+        return true;
+    }
+
+    public static boolean updatePassword(String sessionToken, DatabaseCommunicationContext db, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
+
+    public static boolean updatePasswordHash(String sessionToken, String passwordHash) {
+        return updatePasswordHash((DatabaseCommunicationContext) null, sessionToken, passwordHash);
+    }
+
+    public static boolean updatePasswordHash(DatabaseCommunicationContext db, String sessionToken, String passwordHash) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        if (s == null || passwordHash == null || passwordHash.trim().isEmpty()) {
+            return false;
+        }
+        String cleaned = passwordHash.trim();
+        if (db != null) {
+            try {
+                db.updatePasswordHash(s.userId(), cleaned);
+            } catch (Exception ignored) {
+            }
+        }
+        return true;
+    }
+
+    public static boolean updatePasswordHash(String sessionToken, DatabaseCommunicationContext db, String passwordHash) {
+        return updatePasswordHash(db, sessionToken, passwordHash);
+    }
+
+    public static boolean updateAccountPassword(String sessionToken, String newPassword) {
+        return updatePassword((DatabaseCommunicationContext) null, sessionToken, newPassword);
+    }
+
+    public static boolean updateAccountPassword(DatabaseCommunicationContext db, String sessionToken, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
+
+    public static boolean updateAccountPassword(String sessionToken, DatabaseCommunicationContext db, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
+
+    public static boolean changePassword(String sessionToken, String newPassword) {
+        return updatePassword((DatabaseCommunicationContext) null, sessionToken, newPassword);
+    }
+
+    public static boolean changePassword(DatabaseCommunicationContext db, String sessionToken, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
+
+    public static boolean changePassword(String sessionToken, DatabaseCommunicationContext db, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
+
+    public static boolean setPassword(String sessionToken, String newPassword) {
+        return updatePassword((DatabaseCommunicationContext) null, sessionToken, newPassword);
+    }
+
+    public static boolean setPassword(DatabaseCommunicationContext db, String sessionToken, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
+
+    public static boolean updateUserPassword(String sessionToken, String newPassword) {
+        return updatePassword((DatabaseCommunicationContext) null, sessionToken, newPassword);
+    }
+
+    public static boolean updateUserPassword(DatabaseCommunicationContext db, String sessionToken, String newPassword) {
+        return updatePassword(db, sessionToken, newPassword);
+    }
 }

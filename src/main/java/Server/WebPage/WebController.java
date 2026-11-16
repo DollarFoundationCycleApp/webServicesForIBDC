@@ -840,5 +840,45 @@ public class WebController {
     public String saveFullName(String session, String newFullName) {
         return updateFullName(session, newFullName, null);
     }
+
+    @PostMapping({"/settings/password"})
+    public String updatePasswordForm(@CookieValue(value = "SESSION", required = false) String session,
+                                    @RequestParam(required = false) String newPassword,
+                                    @RequestParam(required = false) String password,
+                                    Model model) {
+        return updatePassword(session, newPassword != null ? newPassword : password, model);
+    }
+
+    @PostMapping({"/settings/update-password"})
+    public String updatePasswordForm2(@CookieValue(value = "SESSION", required = false) String session,
+                                     @RequestParam(required = false) String newPassword,
+                                     @RequestParam(required = false) String password,
+                                     Model model) {
+        return updatePassword(session, newPassword != null ? newPassword : password, model);
+    }
+
+    public String updatePassword(String session, String newPassword) {
+        return updatePassword(session, newPassword, null);
+    }
+
+    public String updatePassword(String session, String newPassword, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        AuthenticationController.updatePassword(db, session, newPassword);
+        return "redirect:/settings";
+    }
+
+    public String updateAccountPassword(String session, String newPassword) {
+        return updatePassword(session, newPassword, null);
+    }
+
+    public String changePassword(String session, String newPassword) {
+        return updatePassword(session, newPassword, null);
+    }
+
+    public String setPassword(String session, String newPassword) {
+        return updatePassword(session, newPassword, null);
+    }
 }
 

@@ -1,9 +1,12 @@
 package Server.WebPage;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -201,15 +204,111 @@ public class WebController {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        model.addAttribute("incidents", loadIncidentData().incidents().stream()
+        List<Incident> incidents = loadIncidentData().incidents().stream()
                 .sorted(Comparator.comparing(Incident::createdTime).reversed())
-                .toList());
+                .toList();
+        model.addAttribute("incidents", incidents);
+
+        // Incident % change for each period compared to the one before it
+        // Database incidents are stored in UTC, so periods are measured in UTC too
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        List<Map<String, Object>> incidentTrends = new ArrayList<>();
+        for (Period p : Period.values()) {
+            LocalDateTime currentStart = p.start(now);
+            LocalDateTime previousStart = p.shift(currentStart, -1);
+            LocalDateTime nextStart = p.shift(currentStart, 1);
+            long currentCount = countBetween(incidents, currentStart, nextStart);
+            long previousCount = countBetween(incidents, previousStart, currentStart);
+
+            String text;
+            String direction;
+            if (previousCount == 0 && currentCount == 0) {
+                text = "0%";
+                direction = "";
+            } else if (previousCount == 0) {
+                text = "↑ new";
+                direction = "up";
+            } else {
+                long percent = Math.round(Math.abs(currentCount - previousCount) * 100.0 / previousCount);
+                if (currentCount > previousCount) {
+                    text = "↑ " + percent + "%";
+                    direction = "up";
+                } else if (currentCount < previousCount) {
+                    text = "↓ " + percent + "%";
+                    direction = "down";
+                } else {
+                    text = "0%";
+                    direction = "";
+                }
+            }
+
+            Map<String, Object> trend = new HashMap<>();
+            trend.put("label", p.label);
+            trend.put("text", text);
+            trend.put("direction", direction);
+            incidentTrends.add(trend);
+        }
+        model.addAttribute("incidentCount", incidents.size());
+        model.addAttribute("incidentTrends", incidentTrends);
+
         long userCount = 0;
         if (db != null) {
             userCount = db.countUsers();
         }
         model.addAttribute("userCount", userCount);
         return "dashboardView";
+    }
+
+    /**
+     * Dashboard reporting periods. Each period is aligned to the calendar
+     * (today, this week starting Monday, this month, this meteorological
+     * season, this year) and compared against the period right before it.
+     */
+    private enum Period {
+        DAILY("Daily"),
+        WEEKLY("Weekly"),
+        MONTHLY("Monthly"),
+        SEASONAL("Seasonal"),
+        YEARLY("Yearly");
+
+        private final String label;
+
+        Period(String label) {
+            this.label = label;
+        }
+
+        /** Start of the period containing the given time. */
+        LocalDateTime start(LocalDateTime now) {
+            LocalDate today = now.toLocalDate();
+            return switch (this) {
+                case DAILY -> today.atStartOfDay();
+                case WEEKLY -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay();
+                case MONTHLY -> today.withDayOfMonth(1).atStartOfDay();
+                // Seasons start in Dec (winter), Mar (spring), Jun (summer), Sep (fall)
+                case SEASONAL -> today.withDayOfMonth(1)
+                        .minusMonths(today.getMonthValue() % 3)
+                        .atStartOfDay();
+                case YEARLY -> today.withDayOfYear(1).atStartOfDay();
+            };
+        }
+
+        /** Move a period start by the given number of periods (-1 = previous, 1 = next). */
+        LocalDateTime shift(LocalDateTime start, int amount) {
+            return switch (this) {
+                case DAILY -> start.plusDays(amount);
+                case WEEKLY -> start.plusWeeks(amount);
+                case MONTHLY -> start.plusMonths(amount);
+                case SEASONAL -> start.plusMonths(3L * amount);
+                case YEARLY -> start.plusYears(amount);
+            };
+        }
+    }
+
+    /** Count incidents created in [from, to). */
+    private static long countBetween(List<Incident> incidents, LocalDateTime from, LocalDateTime to) {
+        return incidents.stream()
+                .filter(i -> !i.createdTime().isBefore(from) && i.createdTime().isBefore(to))
+                .count();
     }
 
     @GetMapping({"/heatmap"})

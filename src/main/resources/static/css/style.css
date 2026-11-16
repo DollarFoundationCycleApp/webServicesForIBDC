@@ -314,6 +314,19 @@ body {
     color: #999999;
 }
 
+/* Stacked % change per period */
+.card-trend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.card-trend-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+}
+
 /* Panels */
 .panel-row {
     display: grid;

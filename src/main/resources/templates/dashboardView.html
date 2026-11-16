@@ -10,8 +10,13 @@
                     <image class="icon" src="icons/camera.svg" alt=""></image>
                     <span>Total Incidents</span>
                 </div>
-                <div class="card-value">1102</div>
-                <div class="card-trend down">&darr; 4% <span class="card-trend-note">vs last period</span></div>
+                <div class="card-value" th:text="${incidentCount}">1102</div>
+                <div class="card-trend-list">
+                    <div th:each="trend : ${incidentTrends}" class="card-trend-row">
+                        <span class="card-trend-note" th:text="${trend.label}">Daily</span>
+                        <span class="card-trend" th:classappend="${trend.direction}" th:text="${trend.text}">&uarr; 4%</span>
+                    </div>
+                </div>
             </div>
         
             <div class="card">

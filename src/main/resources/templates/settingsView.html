@@ -37,11 +37,35 @@
                 <label for="newPassword">New password</label>
                 <div class="settings-row">
                     <input type="password" id="newPassword" name="newPassword"
-                           placeholder="At least 8 characters" required autocomplete="new-password" />
-                    <button type="submit">Update password</button>
+                           placeholder="New password" required autocomplete="new-password" />
+                    <button type="submit" id="update-password-button" disabled>Update password</button>
                 </div>
+                <ul class="password-requirements" id="password-requirements">
+                    <li class="requirement unmet" id="req-length">
+                        <span class="requirement-icon">✕</span> At least 8 characters
+                    </li>
+                </ul>
             </form>
         </section>
+
+        <script>
+            (function () {
+                const input = document.getElementById('newPassword');
+                const reqLength = document.getElementById('req-length');
+                const button = document.getElementById('update-password-button');
+                if (!input || !reqLength) return;
+                const icon = reqLength.querySelector('.requirement-icon');
+                function update() {
+                    const met = input.value.length >= 8;
+                    reqLength.classList.toggle('met', met);
+                    reqLength.classList.toggle('unmet', !met);
+                    if (icon) icon.textContent = met ? '✓' : '✕';
+                    if (button) button.disabled = !met;
+                }
+                input.addEventListener('input', update);
+                update();
+            })();
+        </script>
     </th:block>
 </body>
 </html>

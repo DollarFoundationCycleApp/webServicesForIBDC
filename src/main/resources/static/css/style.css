@@ -1201,3 +1201,35 @@ a  {
 .settings-row button:hover {
     background: #e65c00;
 }
+
+.settings-row button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Password requirements */
+.password-requirements {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0 0;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    margin: 4px 0;
+}
+
+.requirement.unmet {
+    color: #cc3333;
+}
+
+.requirement.met {
+    color: #2e7d32;
+}
+
+.requirement-icon {
+    font-weight: 700;
+}

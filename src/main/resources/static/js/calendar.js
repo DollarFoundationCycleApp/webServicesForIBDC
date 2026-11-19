@@ -4,13 +4,25 @@
     var title = document.getElementById('calendar-title');
     var days = document.getElementById('calendar-days');
     var rangeText = document.getElementById('date-range-text');
+    var allTimeButton = document.getElementById('calendar-all-time');
     var shownMonth = new Date();
     shownMonth.setDate(1);
-    var startDate = null;
-    var stopDate = null;
+    // Default range is the current month so far: the 1st through today
+    var now = new Date();
+    var startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    var stopDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Lets pages react to a completed range; stopDate is inclusive.
+    // "All time" is announced with both dates null.
+    function announceRange() {
+        document.dispatchEvent(new CustomEvent('daterangechange', {
+            detail: { startDate: startDate, stopDate: stopDate }
+        }));
+    }
 
     // First click sets the start date, second sets the stop date, third starts a new range
     function selectDate(date) {
+        allTimeButton.setAttribute('aria-pressed', 'false');
         if (startDate === null || stopDate !== null) {
             startDate = date;
             stopDate = null;
@@ -26,6 +38,9 @@
         }
         rangeText.textContent = text;
         highlightSelection();
+        if (stopDate !== null) {
+            announceRange();
+        }
     }
 
     // Updates classes in place so the clicked cell stays in the DOM and the popup stays open
@@ -99,6 +114,17 @@
         changeMonth(1);
     });
 
+    // Clears the range so pages show every incident; clicking a day afterwards starts a new range
+    allTimeButton.addEventListener('click', function () {
+        startDate = null;
+        stopDate = null;
+        rangeText.textContent = 'All time';
+        allTimeButton.setAttribute('aria-pressed', 'true');
+        highlightSelection();
+        announceRange();
+        setOpen(false);
+    });
+
     // Close when clicking outside the date range box or pressing Escape
     document.addEventListener('click', function (event) {
         if (!button.parentElement.contains(event.target)) {
@@ -111,4 +137,28 @@
             setOpen(false);
         }
     });
+
+    // "yyyy-MM-dd" as a local date, matching the dates of the calendar cells
+    function parseIsoDate(text) {
+        var parts = text.split('-');
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    }
+
+    // Each page picks its starting range: the heatmap starts on "All time", other pages on the current month.
+    // A page filtered on the server (reports) passes its range in so the calendar shows it after reloading.
+    var dateRange = document.getElementById('date-range');
+    if (dateRange.dataset.defaultRange === 'all-time') {
+        startDate = null;
+        stopDate = null;
+        rangeText.textContent = 'All time';
+        allTimeButton.setAttribute('aria-pressed', 'true');
+    } else {
+        if (dateRange.dataset.rangeStart && dateRange.dataset.rangeStop) {
+            startDate = parseIsoDate(dateRange.dataset.rangeStart);
+            stopDate = parseIsoDate(dateRange.dataset.rangeStop);
+            shownMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        }
+        rangeText.textContent = formatDate(startDate) + ' - ' + formatDate(stopDate);
+    }
+    announceRange();
 })();

@@ -6,7 +6,7 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'CycleSafety'
+group = 'IBDCServer'
 version = '1.0-SNAPSHOT'
 
 repositories {
@@ -51,7 +51,7 @@ protobuf {
 
 // Task to run the server
 task runServer(type: JavaExec) {
-    group = 'CycleSafety'
+    group = 'IBDCServer'
     description = 'Run the Server'
     mainClass = 'Server.ServerStart'
     classpath = sourceSets.main.runtimeClasspath

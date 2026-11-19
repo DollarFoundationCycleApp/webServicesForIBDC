@@ -272,14 +272,14 @@ public class WebControllerTest {
         try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
             MockHttpSession httpSession = new MockHttpSession();
             assertEquals("redirect:/incident", controller.searchReports("user", "ABC", 10,
-                    "Toyota", "", "", -1, -1, "", httpSession));
+                    "Toyota", "", "", -1, -1, "", "", httpSession));
             assertNull(httpSession.getAttribute("keyword"));
             assertEquals(List.of(), controller.vehicleModels("user", "Toyota"));
         }
 
         String admin = AuthenticationController.authenticateUser("admin", "password");
         assertEquals("redirect:/reports?limit=10", controller.searchReports(admin, "ABC", 10,
-                "Toyota", "", "", -1, -1, "", new MockHttpSession()));
+                "Toyota", "", "", -1, -1, "", "", new MockHttpSession()));
         assertEquals(List.of("Camry"), controller.vehicleModels(admin, "Toyota"));
     }
 

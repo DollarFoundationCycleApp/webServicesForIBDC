@@ -1,6 +1,7 @@
 package Server.WebPage;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -243,34 +244,7 @@ public class WebController {
             LocalDateTime nextStart = p.shift(currentStart, 1);
             long currentCount = countBetween(incidents, currentStart, nextStart);
             long previousCount = countBetween(incidents, previousStart, currentStart);
-
-            String text;
-            String direction;
-            if (previousCount == 0 && currentCount == 0) {
-                text = "0%";
-                direction = "";
-            } else if (previousCount == 0) {
-                text = "↑ new";
-                direction = "up";
-            } else {
-                long percent = Math.round(Math.abs(currentCount - previousCount) * 100.0 / previousCount);
-                if (currentCount > previousCount) {
-                    text = "↑ " + percent + "%";
-                    direction = "up";
-                } else if (currentCount < previousCount) {
-                    text = "↓ " + percent + "%";
-                    direction = "down";
-                } else {
-                    text = "0%";
-                    direction = "";
-                }
-            }
-
-            Map<String, Object> trend = new HashMap<>();
-            trend.put("label", p.label);
-            trend.put("text", text);
-            trend.put("direction", direction);
-            incidentTrends.add(trend);
+            incidentTrends.add(trend(p.label, currentCount, previousCount, p.unit));
         }
         model.addAttribute("incidentCount", incidents.size());
         model.addAttribute("incidentTrends", incidentTrends);
@@ -280,7 +254,47 @@ public class WebController {
             userCount = db.countUsers();
         }
         model.addAttribute("userCount", userCount);
+
+        // Distinct users active in the last 24 hours, compared with the 24 hours before that
+        Instant nowInstant = Instant.now();
+        Instant dayAgo = nowInstant.minus(Duration.ofHours(24));
+        Instant twoDaysAgo = nowInstant.minus(Duration.ofHours(48));
+        long activeUsers = AuthenticationController.countActiveUsers(dayAgo, nowInstant.plusSeconds(1));
+        long previousActiveUsers = AuthenticationController.countActiveUsers(twoDaysAgo, dayAgo);
+        model.addAttribute("activeUserCount", activeUsers);
+        model.addAttribute("activeUserTrend", trend("", activeUsers, previousActiveUsers, "24hrs"));
         return "dashboardView";
+    }
+
+    /** Label, "↑ 12%" style text, and up/down direction comparing a count with the previous period's. */
+    private static Map<String, Object> trend(String label, long currentCount, long previousCount, String unit) {
+        String text;
+        String direction;
+        if (previousCount == 0 && currentCount == 0) {
+            text = "0%";
+            direction = "";
+        } else if (previousCount == 0) {
+            text = "↑ new (none last " + unit + ")";
+            direction = "up";
+        } else {
+            long percent = Math.round(Math.abs(currentCount - previousCount) * 100.0 / previousCount);
+            if (currentCount > previousCount) {
+                text = "↑ " + percent + "%";
+                direction = "up";
+            } else if (currentCount < previousCount) {
+                text = "↓ " + percent + "%";
+                direction = "down";
+            } else {
+                text = "0%";
+                direction = "";
+            }
+        }
+
+        Map<String, Object> trend = new HashMap<>();
+        trend.put("label", label);
+        trend.put("text", text);
+        trend.put("direction", direction);
+        return trend;
     }
 
     /**
@@ -289,16 +303,18 @@ public class WebController {
      * season, this year) and compared against the period right before it.
      */
     private enum Period {
-        DAILY("Daily"),
-        WEEKLY("Weekly"),
-        MONTHLY("Monthly"),
-        SEASONAL("Seasonal"),
-        YEARLY("Yearly");
+        DAILY("Daily", "day"),
+        WEEKLY("Weekly", "week"),
+        MONTHLY("Monthly", "month"),
+        SEASONAL("Seasonal", "season"),
+        YEARLY("Yearly", "year");
 
         private final String label;
+        private final String unit;
 
-        Period(String label) {
+        Period(String label, String unit) {
             this.label = label;
+            this.unit = unit;
         }
 
         /** Start of the period containing the given time. */

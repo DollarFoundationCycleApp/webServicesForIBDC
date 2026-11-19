@@ -2,15 +2,25 @@ package Server.Controller;
 
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import Server.Model.DatabaseCommunicationContext;
 
 public class AuthenticationController {
     private static final ConcurrentHashMap<String, Session> activeSessions = new ConcurrentHashMap<>();
+
+    /** One sign-in or authenticated request by a user. */
+    private record Activity(String userId, Instant time) {}
+
+    // Recent user activity, oldest first. Kept in memory only, so it resets when the server restarts.
+    private static final ConcurrentLinkedDeque<Activity> recentActivity = new ConcurrentLinkedDeque<>();
+    private static final Duration ACTIVITY_RETENTION = Duration.ofHours(48);
 
     private static final String MOCK_USER = "admin";
     private static final String MOCK_PASSWORD_HASH = hashPassword("password");
@@ -163,7 +173,28 @@ public class AuthenticationController {
     private static String createSession(String userId, String username, boolean isAdmin) {
         String sessionId = UUID.randomUUID().toString();
         activeSessions.put(sessionId, new Session(userId, username, isAdmin));
+        recordActivity(userId);
         return sessionId;
+    }
+
+    private static void recordActivity(String userId) {
+        Instant now = Instant.now();
+        recentActivity.addLast(new Activity(userId, now));
+        Instant cutoff = now.minus(ACTIVITY_RETENTION);
+        Activity oldest = recentActivity.peekFirst();
+        while (oldest != null && oldest.time().isBefore(cutoff)) {
+            recentActivity.pollFirst();
+            oldest = recentActivity.peekFirst();
+        }
+    }
+
+    /** Number of distinct users who signed in or made a request in [from, to). */
+    public static long countActiveUsers(Instant from, Instant to) {
+        return recentActivity.stream()
+                .filter(a -> !a.time().isBefore(from) && a.time().isBefore(to))
+                .map(Activity::userId)
+                .distinct()
+                .count();
     }
 
     /** Details of the signed-in account, or null for an unknown token. */
@@ -172,7 +203,15 @@ public class AuthenticationController {
     }
 
     public static boolean isValidSession(String sessionId) {
-        return sessionId != null && activeSessions.containsKey(sessionId);
+        if (sessionId == null) {
+            return false;
+        }
+        Session session = activeSessions.get(sessionId);
+        if (session == null) {
+            return false;
+        }
+        recordActivity(session.userId());
+        return true;
     }
 
     /** True only for sessions that belong to an admin account. */

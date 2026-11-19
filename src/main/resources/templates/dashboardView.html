@@ -42,8 +42,8 @@
                     <img class="icon" th:src="@{icons/web.svg}" alt="">
                     <span>Users - Last 24hrs</span>
                 </div>
-                <div class="card-value">3145</div>
-                <div class="card-trend up">&uarr; 17% <span class="card-trend-note">vs last period</span></div>
+                <div class="card-value" th:text="${activeUserCount}">0</div>
+                <div class="card-trend" th:classappend="${activeUserTrend.direction}"><span th:text="${activeUserTrend.text}">0%</span> <span class="card-trend-note">vs previous 24hrs</span></div>
             </div>
         </section>
         

@@ -51,6 +51,13 @@ public class WebRequestHandler {
                             "message", "Invalid credentials"
                     ));
         }
+        if (sessionToken.equals("suspended")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "authenticated", false,
+                            "message", "Account Suspended"
+                    ));
+        }
 
         AuthenticationController.Session session = AuthenticationController.getSession(sessionToken);
 

@@ -17,7 +17,7 @@ import jakarta.annotation.PostConstruct;
 @Repository 
 public class LocationModel {
 
-    record City(String name, int pop) {}
+    record City(String name, int pop, double latitude, double longitude) {}
 
     private static final List<City> cities = new ArrayList<>();
 
@@ -33,7 +33,9 @@ public class LocationModel {
                 String city = l[1];
                 String state = l[10];
                 int pop = Integer.parseInt(l[14]);
-                cities.add(new City(city + ", "+ state, pop));
+                double latitude = Double.parseDouble(l[4]);
+                double longitude = Double.parseDouble(l[5]);
+                cities.add(new City(city + ", "+ state, pop, latitude, longitude));
             }
         } catch (Exception e) {
             System.out.println("Failed to load Cities1000... " + e);
@@ -47,5 +49,27 @@ public class LocationModel {
             .limit(8)
             .map(City::name)
             .toList();
+    }
+
+    // Fall back if api fails to get a loaction
+    public static String nearestCity(double latitude, double longitude) {
+        City closestCity = null;
+        double closestDist = Double.MAX_VALUE;
+        
+        for (City c : cities) {
+           double changeLat = Math.toRadians(c.latitude() - latitude);
+           double changeLong = Math.toRadians(c.longitude() - longitude);
+           double dist = 3958.8 * 2 * Math.asin(Math.sqrt(
+                Math.pow(Math.sin(changeLat / 2), 2) +
+                Math.cos(Math.toRadians(latitude)) * Math.cos(Math.toRadians(c.latitude())) *
+                Math.pow(Math.sin(changeLong / 2), 2)
+           ));
+
+           if (dist < closestDist) {
+                closestDist = dist;
+                closestCity = c;            
+           }
+        }
+        return closestCity == null ? "" : closestCity.name();
     }
 }

@@ -1,13 +1,13 @@
-function exportTable(all) {
+function exportTable(selection) {
     const incidents = JSON.parse(sessionStorage.getItem('selectedIncidents') || '[]');
 
-    if (!all && incidents.length == 0) {
+    if (selection == 'selected'  && incidents.length == 0) {
         alert('Must select at least one incident to export.');
         return;
     }
 
     
-    fetch(`/reports/export?all=${all}`, {
+    fetch(`/reports/export?selection=${selection}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(incidents)

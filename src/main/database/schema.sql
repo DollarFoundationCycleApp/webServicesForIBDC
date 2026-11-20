@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     timestamp_ms BIGINT NOT NULL,                   -- Incident timestamp (UTC)
     latitude DECIMAL(10,7),                         -- GPS coordinates from mobile app
     longitude DECIMAL(10,7),
+    location VARCHAR(100),                          -- location in format city, state (eg. Phoenix, AZ)
     accuracy_meters DECIMAL(8,2),                   -- Accuracy in meters
     distance_cm INT UNSIGNED,                       -- Distance to object from embedded sensor
     time_offset_ms FLOAT UNSIGNED,                    -- Sensor offset time in ms

@@ -65,7 +65,7 @@
         }
         var rows = []
         rows.push(['Reported', incident.createdTime]);
-        rows.push(['Location', incident.latitude.toFixed(4) + ', ' + incident.longitude.toFixed(4)]);
+        rows.push(['Location', incident.location]);
         rows.push(['Injury severity', incident.injurySeverity]);
 
         if (!incident.hideInfo) {

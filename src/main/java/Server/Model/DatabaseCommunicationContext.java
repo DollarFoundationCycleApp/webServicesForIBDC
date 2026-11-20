@@ -12,11 +12,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import IBDCServer.Server.IBDCServerV021.Incident;
@@ -510,41 +512,47 @@ public class DatabaseCommunicationContext {
         return models;
     }
 
+    // Shared client so each incident insert doesn't build a new connection pool
+    private static final HttpClient GEOCODER_CLIENT = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(3))
+        .build();
+
     public static String getCityState(double latitude, double longitude) {
-        String cityState = "";
-
         try {
-            HttpClient client = HttpClient.newHttpClient();
-
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=" + longitude + "&y=" + latitude + "&benchmark=4&vintage=4&format=json"))
+                .timeout(Duration.ofSeconds(5))
                 .build();
-                HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-                
-                if(response.statusCode() == 200) {
-                    JSONObject responseBody = new JSONObject(response.body());
+            HttpResponse<String> response = GEOCODER_CLIENT.send(request, BodyHandlers.ofString());
 
-                    String city = responseBody.getJSONObject("result")
-                        .getJSONObject("geographies")
-                        .getJSONArray("Incorporated Places").getJSONObject(0)
-                        .getString("BASENAME");
+            if (response.statusCode() != 200) {
+                System.out.println("Geocoder HTTP error " + response.statusCode() + ", using nearest city");
+                return LocationModel.nearestCity(latitude, longitude);
+            }
 
-                    String state = responseBody.getJSONObject("result")
-                        .getJSONObject("geographies")
-                        .getJSONArray("States").getJSONObject(0)
-                        .getString("STUSAB");
+            JSONObject geographies = new JSONObject(response.body())
+                .getJSONObject("result")
+                .getJSONObject("geographies");
 
-                    cityState = city + ", " + state;
+            JSONArray places = geographies.optJSONArray("Incorporated Places");
+            JSONArray states = geographies.optJSONArray("States");
 
-                } else {
-                    System.out.println("HTTP ERROR: " + response.statusCode());
-                }
+            // Unincorporated/rural points have no place; outside the US has no state
+            if (places == null || places.isEmpty() || states == null || states.isEmpty()) {
+                return LocationModel.nearestCity(latitude, longitude);
+            }
+
+            String city = places.getJSONObject(0).getString("BASENAME");
+            String state = states.getJSONObject(0).getString("STUSAB");
+            return city + ", " + state;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.out.println("Geocoder interrupted, using nearest city");
+            return LocationModel.nearestCity(latitude, longitude);
         } catch (Exception e) {
-            System.out.println("Error getting location: " + e.getMessage());
-            cityState = LocationModel.nearestCity(latitude, longitude);
+            System.out.println("Error getting location: " + e.getMessage() + ", using nearest city");
+            return LocationModel.nearestCity(latitude, longitude);
         }
-
-        return cityState;
     }
 
 

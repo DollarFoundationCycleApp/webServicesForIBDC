@@ -23,7 +23,7 @@ public class LocationModel {
 
     @PostConstruct
     void loadCities() {
-        // Load Cities w/ population > 10005
+        // Load every city in USCities1000.txt (sorted by population below for autocomplete ranking)
         try (var in = new BufferedReader(new InputStreamReader(
             getClass().getResourceAsStream("/USCities1000.txt"), StandardCharsets.UTF_8))) {
 

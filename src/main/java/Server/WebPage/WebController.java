@@ -271,29 +271,31 @@ public class WebController {
         // Plain values only, so they serialize cleanly into the page script
         model.addAttribute("incidents", data.incidents().stream()
                 .map(incident -> {Map<String, Object> fields = new HashMap<>();
-                        fields.put("incidentId", incident.incidentId());
                         fields.put("latitude", incident.latitude());
                         fields.put("longitude", incident.longitude());
-                        fields.put("location", incident.location());
-                        fields.put("injurySeverity", incident.injurySeverity());
-                        fields.put("driverPresent", incident.driverPresent());
-                        fields.put("vehicleMake", incident.vehicleMake());
-                        fields.put("vehicleModel", incident.vehicleModel());
-                        fields.put("vehicleColor", incident.vehicleColor());
-                        fields.put("vehicleYear", incident.vehicleYear());
-                        fields.put("createdTime", incident.createdTime().format(DISPLAY_TIME));
-                        // Machine-readable timestamp so heatmap.js can filter incidents by the calendar's date range
-                        fields.put("createdIso", incident.createdTime().toString());
-                        fields.put("hideInfo", incident.hideInfo());
-                        // Admins can open every incident; everyone else only their own reports.
-                        fields.put("canViewDetails", isAdmin
-                                || (userId != null && userId.equals(data.owners().get(incident.incidentId()))));
-                        
-                        if (!incident.hideInfo()) {
-                                fields.put("imageId", incident.imageId());
-                                fields.put("licensePlate", incident.licensePlate());
-                                fields.put("driverInformation", incident.driverInformation());
-                                fields.put("extraComment", incident.extraComment());
+                        if (isAdmin) {
+                            fields.put("incidentId", incident.incidentId());
+                            fields.put("location", incident.location());
+                            fields.put("injurySeverity", incident.injurySeverity());
+                            fields.put("driverPresent", incident.driverPresent());
+                            fields.put("vehicleMake", incident.vehicleMake());
+                            fields.put("vehicleModel", incident.vehicleModel());
+                            fields.put("vehicleColor", incident.vehicleColor());
+                            fields.put("vehicleYear", incident.vehicleYear());
+                            fields.put("createdTime", incident.createdTime().format(DISPLAY_TIME));
+                            // Machine-readable timestamp so heatmap.js can filter incidents by the calendar's date range
+                            fields.put("createdIso", incident.createdTime().toString());
+                            fields.put("hideInfo", incident.hideInfo());
+                            // Admins can open every incident; everyone else only their own reports.
+                            fields.put("canViewDetails", isAdmin
+                                    || (userId != null && userId.equals(data.owners().get(incident.incidentId()))));
+                            
+                            if (!incident.hideInfo()) {
+                                    fields.put("imageId", incident.imageId());
+                                    fields.put("licensePlate", incident.licensePlate());
+                                    fields.put("driverInformation", incident.driverInformation());
+                                    fields.put("extraComment", incident.extraComment());
+                            }
                         }
                         return fields;
                 }).toList());

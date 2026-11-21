@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS users (
 --   ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER full_name;
 --   ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '' AFTER email;
 --   ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
+--   ALTER TABLE users ADD COLUMN is_suspended TINYINT(1) DEFAULT 0 NOT NULL AFTER is_admin;
 
 -- Session tokens table for user authentication
 CREATE TABLE IF NOT EXISTS sessions (

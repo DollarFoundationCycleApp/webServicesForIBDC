@@ -1207,6 +1207,17 @@ a  {
     cursor: not-allowed;
 }
 
+.settings-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
 /* Password requirements */
 .password-requirements {
     list-style: none;

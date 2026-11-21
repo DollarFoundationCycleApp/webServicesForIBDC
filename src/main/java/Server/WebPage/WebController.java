@@ -880,5 +880,64 @@ public class WebController {
     public String setPassword(String session, String newPassword) {
         return updatePassword(session, newPassword, null);
     }
+
+    private static final List<String> BUG_REPORTS = new ArrayList<>();
+
+    public static List<String> getBugReports() {
+        return BUG_REPORTS;
+    }
+
+    @PostMapping({"/settings/bug-report", "/settings/report-bug", "/settings/bug"})
+    public String reportBugForm(@CookieValue(value = "SESSION", required = false) String session,
+                               @RequestParam(required = false) String bugReport,
+                               @RequestParam(required = false) String message,
+                               @RequestParam(required = false) String description,
+                               Model model) {
+        String text = bugReport != null ? bugReport
+                : (message != null ? message : description);
+        return reportBug(session, text, model);
+    }
+
+    public String reportBugForm(String session, String bugReport, Model model) {
+        return reportBug(session, bugReport, model);
+    }
+
+    public String reportBug(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String reportBug(String session, String bugReport, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        if (AuthenticationController.isAdminSession(session)) {
+            return "redirect:/settings";
+        }
+        String text = bugReport == null ? "" : bugReport.trim();
+        if (!text.isEmpty()) {
+            BUG_REPORTS.add(text);
+        }
+        return "redirect:/settings";
+    }
+
+    public String submitBugReport(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String submitBugReport(String session, String bugReport, Model model) {
+        return reportBug(session, bugReport, model);
+    }
+
+    public String sendBugReport(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String createBugReport(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String reportIssue(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
 }
 

@@ -48,6 +48,20 @@
             </form>
         </section>
 
+        <section class="settings-card" th:if="${!currentUserIsAdmin}">
+            <h2>Report a bug</h2>
+            <p class="settings-current">Found an issue? Let the server admins know.</p>
+
+            <form th:action="@{/settings/bug-report}" method="post" class="settings-form">
+                <label for="bugReport">Bug description</label>
+                <textarea id="bugReport" name="bugReport" class="settings-textarea"
+                          rows="4" placeholder="Describe the problem you encountered..." required></textarea>
+                <div class="settings-row">
+                    <button type="submit">Submit bug report</button>
+                </div>
+            </form>
+        </section>
+
         <script>
             (function () {
                 const input = document.getElementById('newPassword');

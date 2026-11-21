@@ -273,6 +273,8 @@ public class WebController {
                 .map(incident -> {Map<String, Object> fields = new HashMap<>();
                         fields.put("latitude", incident.latitude());
                         fields.put("longitude", incident.longitude());
+                        // Machine-readable timestamp so heatmap.js can filter incidents by the calendar's date range
+                        fields.put("createdIso", incident.createdTime().toString());
                         if (isAdmin) {
                             fields.put("incidentId", incident.incidentId());
                             fields.put("location", incident.location());
@@ -283,8 +285,6 @@ public class WebController {
                             fields.put("vehicleColor", incident.vehicleColor());
                             fields.put("vehicleYear", incident.vehicleYear());
                             fields.put("createdTime", incident.createdTime().format(DISPLAY_TIME));
-                            // Machine-readable timestamp so heatmap.js can filter incidents by the calendar's date range
-                            fields.put("createdIso", incident.createdTime().toString());
                             fields.put("hideInfo", incident.hideInfo());
                             // Admins can open every incident; everyone else only their own reports.
                             fields.put("canViewDetails", isAdmin

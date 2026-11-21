@@ -12,26 +12,34 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import CycleSafety.Server.SCPBV020.FetchIncidentsRequest;
-import CycleSafety.Server.SCPBV020.FetchOffenderHistoryRequest;
-import CycleSafety.Server.SCPBV020.FetchRepeatOffendersRequest;
-import CycleSafety.Server.SCPBV020.HeatmapDataRequest;
-import CycleSafety.Server.SCPBV020.ServerToWeb;
-import CycleSafety.Server.SCPBV020.WebToServer;
+import IBDCServer.Server.IBDCServerV021.FetchIncidentsRequest;
+import IBDCServer.Server.IBDCServerV021.FetchOffenderHistoryRequest;
+import IBDCServer.Server.IBDCServerV021.FetchRepeatOffendersRequest;
+import IBDCServer.Server.IBDCServerV021.HeatmapDataRequest;
+import IBDCServer.Server.IBDCServerV021.ServerToWeb;
+import IBDCServer.Server.IBDCServerV021.WebToServer;
 import Server.Controller.AuthenticationController;
+import Server.Model.DatabaseCommunicationContext;
 
 // Handles the different request endpoints from the web
 @RestController
 public class WebRequestHandler {
     private static final String PROTO = "application/x-protobuf";
-    
+    private static final Duration SESSION_LIFETIME = Duration.ofHours(8);
+
+    private final DatabaseCommunicationContext db;
+
+    public WebRequestHandler(DatabaseCommunicationContext db) {
+        this.db = db;
+    }
+
     @PostMapping(value = "/api/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> loginJson(@RequestBody LoginRequest request) {
         String sessionToken = AuthenticationController.authenticateUser(
+                db,
                 request.usernameOrEmail(),
                 request.password()
         );
@@ -44,21 +52,65 @@ public class WebRequestHandler {
                     ));
         }
 
-        ResponseCookie cookie = ResponseCookie.from("SESSION", sessionToken)
+        AuthenticationController.Session session = AuthenticationController.getSession(sessionToken);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, sessionCookie(sessionToken).toString())
+                .body(Map.of(
+                    "authenticated", true,
+                    "userId", session.userId(),
+                    "sessionToken", sessionToken,
+                    "isAdmin", session.isAdmin()
+        ));
+    }
+
+    @PostMapping(value = "/api/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> registerJson(@RequestBody RegisterRequest request) {
+        AuthenticationController.RegisterResult result = AuthenticationController.register(
+                db,
+                request.username(),
+                request.email(),
+                request.password(),
+                request.confirmPassword()
+        );
+
+        if (result.status() != AuthenticationController.RegisterStatus.SUCCESS) {
+            return ResponseEntity.status(statusFor(result.status()))
+                    .body(Map.of(
+                            "registered", false,
+                            "message", result.message()
+                    ));
+        }
+
+        AuthenticationController.Session session = AuthenticationController.getSession(result.sessionToken());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, sessionCookie(result.sessionToken()).toString())
+                .body(Map.of(
+                    "registered", true,
+                    "message", result.message(),
+                    "userId", session.userId(),
+                    "sessionToken", result.sessionToken(),
+                    "isAdmin", session.isAdmin()
+        ));
+    }
+
+    private static HttpStatus statusFor(AuthenticationController.RegisterStatus status) {
+        return switch (status) {
+            case INVALID -> HttpStatus.BAD_REQUEST;
+            case DUPLICATE -> HttpStatus.CONFLICT;
+            case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case SUCCESS -> HttpStatus.OK;
+        };
+    }
+
+    private static ResponseCookie sessionCookie(String sessionToken) {
+        return ResponseCookie.from("SESSION", sessionToken)
             .httpOnly(true)
             .path("/")
             .sameSite("Lax")
-            .maxAge(Duration.ofHours(8))
+            .maxAge(SESSION_LIFETIME)
             .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(Map.of(
-                    "authenticated", true,
-                    "userId", request.usernameOrEmail(),
-                    "sessionToken", sessionToken,
-                    "isAdmin", true
-        ));
     }
 
     @PostMapping(value = "/api/logout", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -79,7 +131,7 @@ public class WebRequestHandler {
 
     @GetMapping(value = "/api/incidents", produces = PROTO)
     public ServerToWeb incidents(
-        @RequestParam(defaultValue = "0") long userId,
+        @RequestParam(defaultValue = "") String userId,
         @RequestParam(defaultValue = "50") int limit,
         @RequestParam(defaultValue = "0") int offset,
         @RequestParam(defaultValue = "false") boolean isAnonymized) {
@@ -149,5 +201,8 @@ public class WebRequestHandler {
     }
 
     public record LoginRequest(String usernameOrEmail, String password) {
+    }
+
+    public record RegisterRequest(String username, String email, String password, String confirmPassword) {
     }
 }

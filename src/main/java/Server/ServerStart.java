@@ -31,7 +31,7 @@ public class ServerStart {
     DatabaseCommunicationContext databaseCommunicationContext(
             @Value("${db.host:localhost}") String host,
             @Value("${db.port:3306}") int port,
-            @Value("${db.name:cyclenessafety_db}") String name,
+            @Value("${db.name:IBDCServer_db}") String name,
             @Value("${db.username:root}") String user,
             @Value("${db.password:root}") String password) {
         return new DatabaseCommunicationContext(host, port, name, user, password);

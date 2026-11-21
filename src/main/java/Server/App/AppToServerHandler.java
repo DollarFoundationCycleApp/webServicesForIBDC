@@ -4,17 +4,17 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-import CycleSafety.Server.SCPBV020.*;
-import CycleSafety.Server.SCPBV020.AppToServer;
-import CycleSafety.Server.SCPBV020.Incident;
-import CycleSafety.Server.SCPBV020.IncidentPhoto;
-import CycleSafety.Server.SCPBV020.OffenderVehicle;
-import CycleSafety.Server.SCPBV020.ServerErrorResponse;
-import CycleSafety.Server.SCPBV020.ServerToApp;
-import CycleSafety.Server.SCPBV020.SubmitIncidentRequest;
-import CycleSafety.Server.SCPBV020.SubmitIncidentResponse;
-import CycleSafety.Server.SCPBV020.UserAuthRequest;
-import CycleSafety.Server.SCPBV020.UserAuthResponse;
+import IBDCServer.Server.IBDCServerV021.*;
+import IBDCServer.Server.IBDCServerV021.AppToServer;
+import IBDCServer.Server.IBDCServerV021.Incident;
+import IBDCServer.Server.IBDCServerV021.IncidentPhoto;
+import IBDCServer.Server.IBDCServerV021.OffenderVehicle;
+import IBDCServer.Server.IBDCServerV021.ServerErrorResponse;
+import IBDCServer.Server.IBDCServerV021.ServerToApp;
+import IBDCServer.Server.IBDCServerV021.SubmitIncidentRequest;
+import IBDCServer.Server.IBDCServerV021.SubmitIncidentResponse;
+import IBDCServer.Server.IBDCServerV021.UserAuthRequest;
+import IBDCServer.Server.IBDCServerV021.UserAuthResponse;
 import Server.Controller.AuthenticationController;
 import Server.Model.DatabaseCommunicationContext;
 
@@ -35,7 +35,7 @@ public class AppToServerHandler {
                         break;
                     case USER_AUTH_REQUEST:
                         UserAuthRequest authRequest = request.getUserAuthRequest();
-                        response = handleUserAuthentication(authRequest);
+                        response = handleUserAuthentication(authRequest, db);
                         break;
                     default:
                         response.setErrorResponse(ServerErrorResponse.newBuilder()
@@ -82,19 +82,21 @@ public class AppToServerHandler {
     }
 
     // Handles UserAuthRequest and returns a UserAuthResponse
-    private static ServerToApp.Builder handleUserAuthentication(UserAuthRequest request) {
+    private static ServerToApp.Builder handleUserAuthentication(UserAuthRequest request,
+                                                                DatabaseCommunicationContext db) {
         ServerToApp.Builder response = ServerToApp.newBuilder();
 
         String username = request.getUsernameOrEmail();
         String token = request.getAuthTokenOrHash();
 
-        String sessionToken = AuthenticationController.authenticateUserHash(username, token);
+        String sessionToken = AuthenticationController.authenticateUserHash(db, username, token);
+        AuthenticationController.Session session = AuthenticationController.getSession(sessionToken);
 
         response.setUserAuthResponse(UserAuthResponse.newBuilder()
-                .setAuthenticated(sessionToken != null)
-                .setUserId(username)
+                .setAuthenticated(session != null)
+                .setUserId(session != null ? session.userId() : "")
                 .setSessionToken(sessionToken != null ? sessionToken : "")
-                .setIsAdmin(sessionToken != null));
+                .setIsAdmin(session != null && session.isAdmin()));
 
         return response;
     }

@@ -2,22 +2,22 @@ package Server.WebPage;
 
 import java.util.Collections;
 
-import CycleSafety.Server.SCPBV020.FetchIncidentsRequest;
-import CycleSafety.Server.SCPBV020.FetchIncidentsResponse;
-import CycleSafety.Server.SCPBV020.FetchOffenderHistoryRequest;
-import CycleSafety.Server.SCPBV020.FetchOffenderHistoryResponse;
-import CycleSafety.Server.SCPBV020.FetchRepeatOffendersRequest;
-import CycleSafety.Server.SCPBV020.FetchRepeatOffendersResponse;
-import CycleSafety.Server.SCPBV020.HeatmapDataRequest;
-import CycleSafety.Server.SCPBV020.HeatmapDataResponse;
-import CycleSafety.Server.SCPBV020.Incident;
-import CycleSafety.Server.SCPBV020.Location;
-import CycleSafety.Server.SCPBV020.RepeatOffenderSummary;
-import CycleSafety.Server.SCPBV020.ServerErrorResponse;
-import CycleSafety.Server.SCPBV020.ServerToWeb;
-import CycleSafety.Server.SCPBV020.UserAuthRequest;
-import CycleSafety.Server.SCPBV020.UserAuthResponse;
-import CycleSafety.Server.SCPBV020.WebToServer;
+import IBDCServer.Server.IBDCServerV021.FetchIncidentsRequest;
+import IBDCServer.Server.IBDCServerV021.FetchIncidentsResponse;
+import IBDCServer.Server.IBDCServerV021.FetchOffenderHistoryRequest;
+import IBDCServer.Server.IBDCServerV021.FetchOffenderHistoryResponse;
+import IBDCServer.Server.IBDCServerV021.FetchRepeatOffendersRequest;
+import IBDCServer.Server.IBDCServerV021.FetchRepeatOffendersResponse;
+import IBDCServer.Server.IBDCServerV021.HeatmapDataRequest;
+import IBDCServer.Server.IBDCServerV021.HeatmapDataResponse;
+import IBDCServer.Server.IBDCServerV021.Incident;
+import IBDCServer.Server.IBDCServerV021.Location;
+import IBDCServer.Server.IBDCServerV021.RepeatOffenderSummary;
+import IBDCServer.Server.IBDCServerV021.ServerErrorResponse;
+import IBDCServer.Server.IBDCServerV021.ServerToWeb;
+import IBDCServer.Server.IBDCServerV021.UserAuthRequest;
+import IBDCServer.Server.IBDCServerV021.UserAuthResponse;
+import IBDCServer.Server.IBDCServerV021.WebToServer;
 
 public class WebToServerHandler {
 
@@ -68,7 +68,7 @@ public class WebToServerHandler {
     private static ServerToWeb.Builder handleFetchIncidents(FetchIncidentsRequest request) {
         ServerToWeb.Builder response = ServerToWeb.newBuilder();
 
-        long userId = request.getUserId();
+        String userId = request.getUserId();
         int limit = request.getLimit();
         int offset = request.getOffset();
         boolean anonymized = request.getIncludeAnonymizedOnly();

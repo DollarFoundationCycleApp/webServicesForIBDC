@@ -1,8 +1,8 @@
-// Spider Cycle protobuff v0.2.0, 2026-09-27
+// IBDC server protobuff v0.2.1, 2026-09-27
 
 syntax = "proto3";
 
-package CycleSafety.Server;
+package IBDCServer.Server;
 
 // Message sent from the Mobile Application to the Server.
 message AppToServer {
@@ -93,7 +93,7 @@ message Location {
 }
 
 message FetchIncidentsRequest {
-  uint64 user_id = 1;
+  string user_id = 1;
   uint32 limit = 2;
   uint32 offset = 3;
   bool include_anonymized_only = 4;        // Enforce privacy filters

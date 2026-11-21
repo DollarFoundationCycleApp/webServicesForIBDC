@@ -10,8 +10,8 @@
                     <image class="icon" src="icons/camera.svg" alt=""></image>
                     <span>Total Incidents</span>
                 </div>
-                <div class="card-value">1102</div>
-                <div class="card-trend down">&darr; 4% <span class="card-trend-note">vs last period</span></div>
+                <div class="card-value" id="incident-count" th:text="${#lists.size(incidents)}">1102</div>
+                <div class="card-trend" id="incident-trend"></div>
             </div>
         
             <div class="card">
@@ -57,7 +57,7 @@
                         </tr>
                     </thead> 
                     <tbody>
-                        <tr th:each="incident : ${incidents}" th:data-href="@{/incident/{id}(id=${incident.incidentId})}" style="cursor: pointer">
+                        <tr th:each="incident : ${incidents}" th:data-href="@{/incident/{id}(id=${incident.incidentId})}" th:data-created="${incident.createdTime}" style="cursor: pointer">
                             <td th:text="${#temporals.format(incident.createdTime, 'MM/dd/yyyy h:mm a')}">09/30/2026 4:44 PM</td>
                             <td th:text="${#numbers.formatDecimal(incident.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(incident.longitude, 1, 4)}">33.4310, -111.9370</td>
                             <td th:text="${incident.vehicleColor} + ' ' + ${incident.vehicleYear} + ' ' + ${incident.vehicleMake} + ' ' + ${incident.vehicleModel}">Silver 2019 Toyota Camry</td>
@@ -91,6 +91,59 @@
                 incidentScroll.style.maxHeight =
                         (lastVisible.getBoundingClientRect().bottom - incidentScroll.getBoundingClientRect().top) + 'px';
             }
+
+            // Count incidents in the calendar range and compare with the whole month before the start date
+            const incidentTimes = Array.from(incidentRows, row => new Date(row.dataset.created).getTime());
+
+            function countBetween(from, until) {
+                return incidentTimes.filter(time => time >= from.getTime() && time < until.getTime()).length;
+            }
+
+            document.addEventListener('daterangechange', function (event) {
+                const start = event.detail.startDate;
+                const stop = event.detail.stopDate;
+                const trend = document.getElementById('incident-trend');
+
+                // "All time": count everything; there is no previous period to compare with
+                if (start === null) {
+                    document.getElementById('incident-count').textContent = incidentTimes.length;
+                    trend.classList.remove('up', 'down');
+                    trend.textContent = '';
+                    const allTimeNote = document.createElement('span');
+                    allTimeNote.className = 'card-trend-note';
+                    allTimeNote.textContent = 'All time';
+                    trend.appendChild(allTimeNote);
+                    return;
+                }
+
+                // stopDate is inclusive, so count up to the start of the following day
+                const current = countBetween(start, new Date(stop.getFullYear(), stop.getMonth(), stop.getDate() + 1));
+                const previous = countBetween(new Date(start.getFullYear(), start.getMonth() - 1, 1),
+                        new Date(start.getFullYear(), start.getMonth(), 1));
+
+                document.getElementById('incident-count').textContent = current;
+
+                const note = document.createElement('span');
+                note.className = 'card-trend-note';
+                note.textContent = ' vs last period';
+                trend.classList.remove('up', 'down');
+                if (previous === 0) {
+                    trend.textContent = current === 0 ? 'No change' : 'New';
+                    note.textContent = ' (none last period)';
+                } else {
+                    const change = Math.round((current - previous) / previous * 100);
+                    if (change > 0) {
+                        trend.classList.add('up');
+                        trend.textContent = '↑ ' + change + '%';
+                    } else if (change < 0) {
+                        trend.classList.add('down');
+                        trend.textContent = '↓ ' + Math.abs(change) + '%';
+                    } else {
+                        trend.textContent = '0%';
+                    }
+                }
+                trend.appendChild(note);
+            });
         </script>
     </th:block>
 </body>

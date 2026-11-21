@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IBDC Server - Create Account</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .login-container {
+            display: flex;
+            width: 900px;
+            height: 550px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .hero-section {
+            flex: 1.2;
+            position: relative;
+            background: url('/Images/RobDollarFoundation.jpg') center/cover no-repeat;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+        }
+
+        .hero-title {
+            color: #ffffff;
+            font-size: 2.3rem;
+            font-weight: bold;
+            text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Right side form panel */
+        .form-section {
+            flex: 1;
+            padding: 32px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-section h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #000000;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #333333;
+            margin-bottom: 22px;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: #444444;
+            margin-bottom: 6px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cccccc;
+            border-radius: 2px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: #ff6600;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            cursor: pointer;
+            color: #666666;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+
+        .submit-btn {
+            background-color: #ff6600;
+            color: #ffffff;
+            border: 1px solid #000000;
+            padding: 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            border-radius: 2px;
+            transition: background-color 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            background-color: #e55c00;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: default;
+        }
+
+        .register-message {
+            min-height: 18px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #cc3333;
+            font-weight: bold;
+        }
+
+        .join-text {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #333333;
+            font-weight: bold;
+        }
+
+        .join-text a {
+            color: #ff6600;
+            text-decoration: none;
+        }
+
+        .join-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="hero-section">
+        <h2 class="hero-title">IBDC Server</h2>
+    </div>
+
+    <div class="form-section">
+        <h1>Create Account</h1>
+        <p class="subtitle">Join the IBDC community</p>
+
+        <form id="register-form" action="/register" method="GET">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" autocomplete="username" value="" required>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" autocomplete="email" value="" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" autocomplete="new-password"
+                           minlength="8" placeholder="At least 8 characters" value="" required>
+                    <span class="toggle-password" data-target="password">Show</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="confirm-password">Confirm Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirm-password" name="confirmPassword" autocomplete="new-password"
+                           minlength="8" value="" required>
+                    <span class="toggle-password" data-target="confirm-password">Show</span>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Create Account</button>
+        </form>
+        <p id="register-message" class="register-message" aria-live="polite"></p>
+
+        <p class="join-text">Already have an account? <a href="/login">Log In</a></p>
+    </div>
+</div>
+
+<script type="text/javascript" src="js/register.js"></script>
+
+</body>
+</html>

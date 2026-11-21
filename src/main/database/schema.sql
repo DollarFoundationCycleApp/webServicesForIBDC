@@ -1,12 +1,12 @@
--- Cycle Safety database schema
+-- IBDC Server database schema
 -- Incident information and incident images are stored in two separate tables
 -- linked by incident_id. A device_event_id is only unique per user, so the
 -- incident_id (server-assigned) is the reliable link between the tables.
 
-CREATE DATABASE IF NOT EXISTS cyclenessafety_db
+CREATE DATABASE IF NOT EXISTS IBDCServer_db
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE cyclenessafety_db;
+USE IBDCServer_db;
 
 -- Incident Information Table
 CREATE TABLE IF NOT EXISTS incidents (
@@ -18,8 +18,9 @@ CREATE TABLE IF NOT EXISTS incidents (
     longitude DECIMAL(10,7),
     accuracy_meters DECIMAL(8,2),                   -- Accuracy in meters
     distance_cm INT UNSIGNED,                       -- Distance to object from embedded sensor
-    time_offset_ms INT UNSIGNED,                    -- Sensor offset time in ms
+    time_offset_ms FLOAT UNSIGNED,                    -- Sensor offset time in ms
     is_anonymized TINYINT(1) DEFAULT 0 NOT NULL,    -- Flag denoting sensitive info stripping
+    additional_comments TEXT,                       -- Free text only admins can edit on /incident
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_device_event_id (device_event_id),
@@ -62,14 +63,40 @@ CREATE TABLE IF NOT EXISTS offender_vehicles (
     INDEX idx_state_or_region (state_or_region)
 );
 
+-- Vehicle Makes and Models Tables (for filtering)
+CREATE TABLE IF NOT EXISTS vehicle_makes (
+    make_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    make_name VARCHAR(100) UNIQUE NOT NULL        -- Vehicle make name
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_models (
+    model_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    make_id BIGINT NOT NULL,                      -- Foreign key linking to vehicle_makes
+    model_name VARCHAR(100) NOT NULL,             -- Vehicle model name
+    FOREIGN KEY (make_id) REFERENCES vehicle_makes(make_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE KEY uq_make_model (make_id, model_name)
+);
+
 -- User table for user authentication and incident reporting
+-- Usernames and emails are stored separately: the login form accepts either.
+-- Passwords are stored as SHA-256 hex hashes (see AuthenticationController).
 CREATE TABLE IF NOT EXISTS users (
-    user_id VARCHAR(255) PRIMARY KEY,                -- User ID from mobile app
-    username_or_email VARCHAR(255) UNIQUE NOT NULL,  -- Stored email/username
+    user_id VARCHAR(255) PRIMARY KEY,                -- User ID from mobile app or generated at sign-up
+    username_or_email VARCHAR(255) UNIQUE NOT NULL,  -- Username chosen at sign-up
+    email VARCHAR(255) UNIQUE NOT NULL,              -- Email address from sign-up
+    password_hash VARCHAR(255) NOT NULL,             -- SHA-256 hash of the password
     is_admin TINYINT(1) DEFAULT 0 NOT NULL,          -- Set true for Admin accounts
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Upgrading an existing database: the columns above were added for the web
+-- sign-up page. If the users table already exists, run these once instead of
+-- re-creating it:
+--   ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER username_or_email;
+--   ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '' AFTER email;
+--   ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
 
 -- Session tokens table for user authentication
 CREATE TABLE IF NOT EXISTS sessions (

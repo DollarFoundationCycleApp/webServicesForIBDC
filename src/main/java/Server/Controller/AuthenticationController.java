@@ -1,7 +1,7 @@
 package Server.Controller;
 
-import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -58,7 +58,7 @@ public class AuthenticationController {
      * demo account (admin/password) when no database is available, so the web
      * pages still work for local demos without MySQL running.
      *
-     * @return a session token on success, null when the credentials are wrong.
+     * @return a session token on success, null when the credentials are wrong, "suspended" when account is suspended.
      */
     public static String authenticateUser(DatabaseCommunicationContext db, String usernameOrEmail, String password) {
         if (usernameOrEmail == null || password == null) {
@@ -72,6 +72,9 @@ public class AuthenticationController {
                 String storedHash = String.valueOf(user.get("password_hash"));
                 if (!hashPassword(password).equalsIgnoreCase(storedHash)) {
                     return null;
+                }
+                if (Boolean.TRUE.equals(user.get("is_suspended"))) {
+                    return "suspended";
                 }
                 return createSession(String.valueOf(user.get("user_id")), text(user.get("username_or_email")),
                         Boolean.TRUE.equals(user.get("is_admin")));

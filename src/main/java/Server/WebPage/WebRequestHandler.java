@@ -51,6 +51,13 @@ public class WebRequestHandler {
                             "message", "Invalid credentials"
                     ));
         }
+        if (sessionToken.equals("suspended")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "authenticated", false,
+                            "message", "Account Suspended"
+                    ));
+        }
 
         AuthenticationController.Session session = AuthenticationController.getSession(sessionToken);
 
@@ -107,6 +114,7 @@ public class WebRequestHandler {
     private static ResponseCookie sessionCookie(String sessionToken) {
         return ResponseCookie.from("SESSION", sessionToken)
             .httpOnly(true)
+            .secure(true)
             .path("/")
             .sameSite("Lax")
             .maxAge(SESSION_LIFETIME)
@@ -119,6 +127,8 @@ public class WebRequestHandler {
         
                 AuthenticationController.logout(sessionToken);
                 ResponseCookie expCookie = ResponseCookie.from("SESSION", "")
+                    .httpOnly(true)
+                    .secure(true)
                     .path("/")
                     .maxAge(0)
                     .build();

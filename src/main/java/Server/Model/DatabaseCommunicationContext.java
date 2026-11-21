@@ -418,7 +418,7 @@ public class DatabaseCommunicationContext {
      *         cannot be reached.
      */
     public Map<String, Object> findUserByUsernameOrEmail(String usernameOrEmail) {
-        String sql = "SELECT user_id, username_or_email, email, password_hash, is_admin "
+        String sql = "SELECT user_id, username_or_email, email, password_hash, is_admin, is_suspended "
                 + "FROM users WHERE username_or_email = ? OR email = ? LIMIT 1";
 
         try (Connection conn = getConnection();
@@ -437,6 +437,7 @@ public class DatabaseCommunicationContext {
                 user.put("email", rs.getString("email"));
                 user.put("password_hash", rs.getString("password_hash"));
                 user.put("is_admin", rs.getBoolean("is_admin"));
+                user.put("is_suspended", rs.getBoolean("is_suspended"));
                 return user;
             }
         } catch (SQLException e) {

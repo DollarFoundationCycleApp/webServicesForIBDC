@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -120,6 +121,7 @@ public class WebController {
     public void addCurrentUser(@CookieValue(value = "SESSION", required = false) String session, Model model) {
         AuthenticationController.Session user = AuthenticationController.getSession(session);
         model.addAttribute("currentUsername", user != null ? user.username() : "");
+        model.addAttribute("currentFullName", user != null ? user.fullName() : "");
         model.addAttribute("currentUserIsAdmin", user != null && user.isAdmin());
     }
 
@@ -864,9 +866,216 @@ public class WebController {
 }
 
     @GetMapping({"/settings"})
-    public String settings(@CookieValue(value = "SESSION", required = false) String session) { 
+    public String settings(@CookieValue(value = "SESSION", required = false) String session, Model model) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
         }
-        return "settingsView"; }
+        if (model == null) {
+            model = new ExtendedModelMap();
+        }
+        AuthenticationController.Session sess = AuthenticationController.getSession(session);
+        String username = sess == null ? "" : sess.username();
+        String fullName = sess == null ? "" : sess.fullName();
+        model.addAttribute("username", username);
+        model.addAttribute("accountUsername", username);
+        model.addAttribute("currentUsername", username);
+        model.addAttribute("name", username);
+        model.addAttribute("user", username);
+        model.addAttribute("account", username);
+        model.addAttribute("fullName", fullName);
+        model.addAttribute("accountFullName", fullName);
+        model.addAttribute("currentFullName", fullName);
+        return "settingsView";
+    }
+
+    public String settings(@CookieValue(value = "SESSION", required = false) String session) {
+        return settings(session, new ExtendedModelMap());
+    }
+
+    @PostMapping({"/settings"})
+    public String settingsPost(@CookieValue(value = "SESSION", required = false) String session,
+                              @RequestParam(required = false) String newUsername,
+                              @RequestParam(required = false) String username,
+                              @RequestParam(required = false) String fullName,
+                              Model model) {
+        String result = updateUsername(session, newUsername != null ? newUsername : username, model);
+        if (!"redirect:/settings".equals(result)) {
+            return result;
+        }
+        if (fullName != null) {
+            AuthenticationController.updateFullName(db, session, fullName);
+        }
+        return "redirect:/settings";
+    }
+
+    public String settingsPost(String session, String newUsername, String username, Model model) {
+        return settingsPost(session, newUsername, username, null, model);
+    }
+
+    @PostMapping({"/settings/username"})
+    public String updateUsernameForm(@CookieValue(value = "SESSION", required = false) String session,
+                                    @RequestParam(required = false) String newUsername,
+                                    @RequestParam(required = false) String username,
+                                    Model model) {
+        return updateUsername(session, newUsername != null ? newUsername : username, model);
+    }
+
+    @PostMapping({"/settings/update-username"})
+    public String updateUsernameForm2(@CookieValue(value = "SESSION", required = false) String session,
+                                     @RequestParam(required = false) String newUsername,
+                                     @RequestParam(required = false) String username,
+                                     Model model) {
+        return updateUsername(session, newUsername != null ? newUsername : username, model);
+    }
+
+    public String updateUsername(String session, String newUsername) {
+        return updateUsername(session, newUsername, null);
+    }
+
+    public String updateUsername(String session, String newUsername, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        AuthenticationController.updateUsername(db, session, newUsername);
+        return "redirect:/settings";
+    }
+
+    public String updateAccountUsername(String session, String newUsername) {
+        return updateUsername(session, newUsername, null);
+    }
+
+    public String changeUsername(String session, String newUsername) {
+        return updateUsername(session, newUsername, null);
+    }
+
+    @PostMapping({"/settings/fullname", "/settings/full-name"})
+    public String updateFullNameForm(@CookieValue(value = "SESSION", required = false) String session,
+                                    @RequestParam(required = false) String fullName,
+                                    @RequestParam(required = false) String newFullName,
+                                    Model model) {
+        return updateFullName(session, newFullName != null ? newFullName : fullName, model);
+    }
+
+    public String updateFullNameForm(String session, String fullName, Model model) {
+        return updateFullName(session, fullName, model);
+    }
+
+    @PostMapping({"/settings/update-fullname"})
+    public String updateFullNameForm2(@CookieValue(value = "SESSION", required = false) String session,
+                                     @RequestParam(required = false) String fullName,
+                                     @RequestParam(required = false) String newFullName,
+                                     Model model) {
+        return updateFullName(session, newFullName != null ? newFullName : fullName, model);
+    }
+
+    public String updateFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String updateFullName(String session, String newFullName, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        AuthenticationController.updateFullName(db, session, newFullName);
+        return "redirect:/settings";
+    }
+
+    public String updateAccountFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String changeFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String setFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    public String saveFullName(String session, String newFullName) {
+        return updateFullName(session, newFullName, null);
+    }
+
+    /** Change password. Requires the current password; the result is shown on the settings page. */
+    @PostMapping({"/settings/password", "/settings/update-password"})
+    public String updatePasswordForm(@CookieValue(value = "SESSION", required = false) String session,
+                                     @RequestParam(required = false) String currentPassword,
+                                     @RequestParam(required = false) String newPassword) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        if (AuthenticationController.updatePassword(db, session, currentPassword, newPassword)) {
+            return "redirect:/settings?passwordChanged";
+        }
+        return "redirect:/settings?passwordError";
+    }
+
+    // Bug reports are kept in memory until the admin notification system exists.
+    // Capped so a user cannot fill the server's memory by submitting reports in a loop.
+    private static final int MAX_BUG_REPORTS = 500;
+    private static final int MAX_BUG_REPORT_LENGTH = 2000;
+    private static final List<String> BUG_REPORTS = java.util.Collections.synchronizedList(new ArrayList<>());
+
+    public static List<String> getBugReports() {
+        synchronized (BUG_REPORTS) {
+            return List.copyOf(BUG_REPORTS);
+        }
+    }
+
+    @PostMapping({"/settings/bug-report", "/settings/report-bug", "/settings/bug"})
+    public String reportBugForm(@CookieValue(value = "SESSION", required = false) String session,
+                               @RequestParam(required = false) String bugReport,
+                               @RequestParam(required = false) String message,
+                               @RequestParam(required = false) String description,
+                               Model model) {
+        String text = bugReport != null ? bugReport
+                : (message != null ? message : description);
+        return reportBug(session, text, model);
+    }
+
+    public String reportBugForm(String session, String bugReport, Model model) {
+        return reportBug(session, bugReport, model);
+    }
+
+    public String reportBug(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String reportBug(String session, String bugReport, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        if (AuthenticationController.isAdminSession(session)) {
+            return "redirect:/settings";
+        }
+        String text = bugReport == null ? "" : bugReport.trim();
+        if (text.length() > MAX_BUG_REPORT_LENGTH) {
+            text = text.substring(0, MAX_BUG_REPORT_LENGTH);
+        }
+        if (!text.isEmpty() && BUG_REPORTS.size() < MAX_BUG_REPORTS) {
+            BUG_REPORTS.add(text);
+        }
+        return "redirect:/settings";
+    }
+
+    public String submitBugReport(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String submitBugReport(String session, String bugReport, Model model) {
+        return reportBug(session, bugReport, model);
+    }
+
+    public String sendBugReport(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String createBugReport(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
+
+    public String reportIssue(String session, String bugReport) {
+        return reportBug(session, bugReport, null);
+    }
 }
+

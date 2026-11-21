@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mockStatic;
@@ -201,7 +202,7 @@ public class WebControllerTest {
 
     @Test
     public void privateIncidentsStillShowAdditionalComments() {
-        Incident incident = new Incident("1", 0, 0, "PLATE", "img", "None", false, "driver", "comment",
+        Incident incident = new Incident("1", 0, 0, "", "PLATE", "img", "None", false, "driver", "comment",
                 "", "", "", 0, LocalDateTime.now(), true, "shared");
 
         Incident hidden = Incident.hideInfo(incident);
@@ -212,7 +213,7 @@ public class WebControllerTest {
 
     @Test
     public void hidingInfoRemovesEveryPrivateField() {
-        Incident incident = new Incident("1", 0, 0, "PLATE", "img", "None", false, "driver", "comment",
+        Incident incident = new Incident("1", 0, 0, "", "PLATE", "img", "None", false, "driver", "comment",
                 "", "", "", 0, LocalDateTime.now(), true, "shared");
 
         Incident hidden = Incident.hideInfo(incident);
@@ -380,7 +381,8 @@ public class WebControllerTest {
                 controller.reports(admin, 1, 10, null, null, false, new MockHttpSession(), new ExtendedModelMap()));
     }
 
-    /** Each pin is clickable only for incidents the account may open. */
+    /** Only admins get clickable pins; everyone else gets locations only. */
+    @SuppressWarnings("unchecked")
     @Test
     public void heatmapLinksOnlyIncidentsTheAccountCanOpen() {
         WebController controller = new WebController(new FakeDatabase());
@@ -391,14 +393,16 @@ public class WebControllerTest {
         assertEquals(Boolean.TRUE, heatmapIncident(adminModel, "100").get("canViewDetails"));
         assertEquals(Boolean.TRUE, heatmapIncident(adminModel, "20").get("canViewDetails"));
 
-        // Regular account: own reports link; samples and other accounts' pins do not.
+        // Regular account: no pin links, and the page gets only pin locations, even for the
+        // user's own reports, so nothing private can be read from the page source.
         try (MockedStatic<AuthenticationController> auth = asUser("user", "user-1", false)) {
             ExtendedModelMap userModel = new ExtendedModelMap();
             controller.heatmap("user", userModel);
-            assertEquals(Boolean.TRUE, heatmapIncident(userModel, "100").get("canViewDetails"));
-            assertEquals(Boolean.TRUE, heatmapIncident(userModel, "300").get("canViewDetails"));
-            assertEquals(Boolean.FALSE, heatmapIncident(userModel, "200").get("canViewDetails"));
-            assertEquals(Boolean.FALSE, heatmapIncident(userModel, "20").get("canViewDetails"));
+            List<Map<String, Object>> incidents = (List<Map<String, Object>>) userModel.getAttribute("incidents");
+            assertFalse(incidents.isEmpty());
+            for (Map<String, Object> fields : incidents) {
+                assertEquals(Set.of("latitude", "longitude"), fields.keySet());
+            }
         }
     }
 

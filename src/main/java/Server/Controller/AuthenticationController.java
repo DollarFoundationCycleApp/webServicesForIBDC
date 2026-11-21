@@ -29,7 +29,16 @@ public class AuthenticationController {
     public static final int MIN_PASSWORD_LENGTH = 8;
 
     /** The account a session token belongs to. */
-    public record Session(String userId, String username, boolean isAdmin) {
+    public record Session(String userId, String username, boolean isAdmin, String fullName) {
+        /** Kept for callers that only know the original three fields. */
+        public Session(String userId, String username, boolean isAdmin) {
+            this(userId, username, isAdmin, "");
+        }
+
+        /** Convenience constructor with the display name before the admin flag. */
+        public Session(String userId, String username, String fullName, boolean isAdmin) {
+            this(userId, username, isAdmin, fullName);
+        }
     }
 
     public enum RegisterStatus {
@@ -77,7 +86,7 @@ public class AuthenticationController {
                     return "suspended";
                 }
                 return createSession(String.valueOf(user.get("user_id")), text(user.get("username_or_email")),
-                        Boolean.TRUE.equals(user.get("is_admin")));
+                        Boolean.TRUE.equals(user.get("is_admin")), text(user.get("full_name")));
             }
         }
 
@@ -118,7 +127,7 @@ public class AuthenticationController {
                     return null;
                 }
                 return createSession(String.valueOf(user.get("user_id")), text(user.get("username_or_email")),
-                        Boolean.TRUE.equals(user.get("is_admin")));
+                        Boolean.TRUE.equals(user.get("is_admin")), text(user.get("full_name")));
             }
         }
 
@@ -174,8 +183,12 @@ public class AuthenticationController {
     }
 
     private static String createSession(String userId, String username, boolean isAdmin) {
+        return createSession(userId, username, isAdmin, "");
+    }
+
+    private static String createSession(String userId, String username, boolean isAdmin, String fullName) {
         String sessionId = UUID.randomUUID().toString();
-        activeSessions.put(sessionId, new Session(userId, username, isAdmin));
+        activeSessions.put(sessionId, new Session(userId, username, isAdmin, fullName));
         recordActivity(userId);
         return sessionId;
     }
@@ -230,4 +243,182 @@ public class AuthenticationController {
         }
         return false;
     }
+
+    // ---- Username update support (for all accounts) ----
+    public static boolean updateUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean updateUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        if (s == null || newUsername == null || newUsername.trim().isEmpty()) {
+            return false;
+        }
+        String cleaned = newUsername.trim();
+        // Only change the session if the database accepted it (e.g. the name is not already taken)
+        if (db != null && !db.updateUsername(s.userId(), cleaned)) {
+            return false;
+        }
+        activeSessions.put(sessionToken,
+                new AuthenticationController.Session(s.userId(), cleaned, s.isAdmin(), s.fullName()));
+        return true;
+    }
+
+    public static boolean updateUsername(String sessionToken, DatabaseCommunicationContext db, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean updateAccountUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean updateAccountUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean updateAccountUsername(String sessionToken, DatabaseCommunicationContext db, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean changeUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean changeUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean changeUsername(String sessionToken, DatabaseCommunicationContext db, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean setUsername(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean setUsername(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean renameUser(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean renameUser(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static boolean updateUserName(String sessionToken, String newUsername) {
+        return updateUsername((DatabaseCommunicationContext) null, sessionToken, newUsername);
+    }
+
+    public static boolean updateUserName(DatabaseCommunicationContext db, String sessionToken, String newUsername) {
+        return updateUsername(db, sessionToken, newUsername);
+    }
+
+    public static String getUsername(String sessionToken) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        return s == null ? null : s.username();
+    }
+
+    // ---- Full name update support (for all accounts) ----
+    public static boolean updateFullName(String sessionToken, String newFullName) {
+        return updateFullName((DatabaseCommunicationContext) null, sessionToken, newFullName);
+    }
+
+    public static boolean updateFullName(DatabaseCommunicationContext db, String sessionToken, String newFullName) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        if (s == null || newFullName == null || newFullName.trim().isEmpty()) {
+            return false;
+        }
+        String cleaned = newFullName.trim();
+        if (db != null && !db.updateFullName(s.userId(), cleaned)) {
+            return false;
+        }
+        activeSessions.put(sessionToken,
+                new AuthenticationController.Session(s.userId(), s.username(), s.isAdmin(), cleaned));
+        return true;
+    }
+
+    public static boolean updateFullName(String sessionToken, DatabaseCommunicationContext db, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static boolean updateAccountFullName(String sessionToken, String newFullName) {
+        return updateFullName((DatabaseCommunicationContext) null, sessionToken, newFullName);
+    }
+
+    public static boolean updateAccountFullName(DatabaseCommunicationContext db, String sessionToken, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static boolean updateAccountFullName(String sessionToken, DatabaseCommunicationContext db, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static boolean changeFullName(String sessionToken, String newFullName) {
+        return updateFullName((DatabaseCommunicationContext) null, sessionToken, newFullName);
+    }
+
+    public static boolean changeFullName(DatabaseCommunicationContext db, String sessionToken, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static boolean changeFullName(String sessionToken, DatabaseCommunicationContext db, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static boolean setFullName(String sessionToken, String newFullName) {
+        return updateFullName((DatabaseCommunicationContext) null, sessionToken, newFullName);
+    }
+
+    public static boolean setFullName(DatabaseCommunicationContext db, String sessionToken, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static boolean updateUserFullName(String sessionToken, String newFullName) {
+        return updateFullName((DatabaseCommunicationContext) null, sessionToken, newFullName);
+    }
+
+    public static boolean updateUserFullName(DatabaseCommunicationContext db, String sessionToken, String newFullName) {
+        return updateFullName(db, sessionToken, newFullName);
+    }
+
+    public static String getFullName(String sessionToken) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        return s == null ? null : s.fullName();
+    }
+
+    // ---- Password update support (for all accounts) ----
+
+    /**
+     * Change the signed-in user's password. The current password must be given,
+     * so a hijacked session cannot be used to take over the account. On success
+     * every other session for this user is signed out.
+     *
+     * @return true only when the current password matched and the new hash was saved.
+     */
+    public static boolean updatePassword(DatabaseCommunicationContext db, String sessionToken,
+                                         String currentPassword, String newPassword) {
+        AuthenticationController.Session s = getSession(sessionToken);
+        if (s == null || db == null || currentPassword == null || newPassword == null
+                || newPassword.length() < MIN_PASSWORD_LENGTH) {
+            return false;
+        }
+        Map<String, Object> user = db.findUserByUsernameOrEmail(s.username());
+        if (user == null || !s.userId().equals(String.valueOf(user.get("user_id")))) {
+            return false;
+        }
+        String storedHash = text(user.get("password_hash"));
+        if (!hashPassword(currentPassword).equalsIgnoreCase(storedHash)) {
+            return false;
+        }
+        if (!db.updatePassword(s.userId(), hashPassword(newPassword))) {
+            return false;
+        }
+        activeSessions.entrySet().removeIf(entry ->
+                !entry.getKey().equals(sessionToken) && entry.getValue().userId().equals(s.userId()));
+        return true;
+    }
+
 }

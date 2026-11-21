@@ -2,8 +2,91 @@
         th:replace="~{viewTemplate :: viewLayout('Settings', 'User Settings', 'settings', ~{::content})}">
 <body>
     <th:block th:fragment="content">
-        <!-- Page Specific content-->
+        <section class="settings-card">
+            <h2>Account</h2>
+            <p class="settings-current">Current username: <strong th:text="${username}">admin</strong></p>
 
+            <form th:action="@{/settings}" method="post" class="settings-form">
+                <label for="newUsername">New username</label>
+                <div class="settings-row">
+                    <input type="text" id="newUsername" name="newUsername"
+                           th:value="${username}" required autocomplete="username" />
+                    <button type="submit">Update username</button>
+                </div>
+            </form>
+
+            <hr class="settings-divider" />
+
+            <p class="settings-current">
+                Full name:
+                <strong th:text="${#strings.isEmpty(fullName)} ? 'Not set' : ${fullName}">Not set</strong>
+            </p>
+
+            <form th:action="@{/settings/fullname}" method="post" class="settings-form">
+                <label for="fullName">Full name</label>
+                <div class="settings-row">
+                    <input type="text" id="fullName" name="fullName"
+                           th:value="${fullName}" placeholder="e.g. Jane Doe" required autocomplete="name" />
+                    <button type="submit">Save full name</button>
+                </div>
+            </form>
+
+            <hr class="settings-divider" />
+
+            <form th:action="@{/settings/password}" method="post" class="settings-form">
+                <p class="settings-current" th:if="${param.passwordChanged}">Password updated. Other devices have been signed out.</p>
+                <p class="settings-current" th:if="${param.passwordError}">Password not changed. Check your current password and try again.</p>
+                <label for="currentPassword">Current password</label>
+                <div class="settings-row">
+                    <input type="password" id="currentPassword" name="currentPassword"
+                           placeholder="Current password" required autocomplete="current-password" />
+                </div>
+                <label for="newPassword">New password</label>
+                <div class="settings-row">
+                    <input type="password" id="newPassword" name="newPassword"
+                           placeholder="New password" required autocomplete="new-password" />
+                    <button type="submit" id="update-password-button" disabled>Update password</button>
+                </div>
+                <ul class="password-requirements" id="password-requirements">
+                    <li class="requirement unmet" id="req-length">
+                        <span class="requirement-icon">✕</span> At least 8 characters
+                    </li>
+                </ul>
+            </form>
+        </section>
+
+        <section class="settings-card" th:if="${!currentUserIsAdmin}">
+            <h2>Report a bug</h2>
+            <p class="settings-current">Found an issue? Let the server admins know.</p>
+
+            <form th:action="@{/settings/bug-report}" method="post" class="settings-form">
+                <label for="bugReport">Bug description</label>
+                <textarea id="bugReport" name="bugReport" class="settings-textarea"
+                          rows="4" placeholder="Describe the problem you encountered..." required></textarea>
+                <div class="settings-row">
+                    <button type="submit">Submit bug report</button>
+                </div>
+            </form>
+        </section>
+
+        <script>
+            (function () {
+                const input = document.getElementById('newPassword');
+                const reqLength = document.getElementById('req-length');
+                const button = document.getElementById('update-password-button');
+                if (!input || !reqLength) return;
+                const icon = reqLength.querySelector('.requirement-icon');
+                function update() {
+                    const met = input.value.length >= 8;
+                    reqLength.classList.toggle('met', met);
+                    reqLength.classList.toggle('unmet', !met);
+                    if (icon) icon.textContent = met ? '✓' : '✕';
+                    if (button) button.disabled = !met;
+                }
+                input.addEventListener('input', update);
+                update();
+            })();
+        </script>
     </th:block>
 </body>
 </html>

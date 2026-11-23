@@ -5,12 +5,15 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
+      SUPERADMIN_PASSWORD: password
+      SUPERADMIN_USERNAME: superadmin
       MYSQL_DATABASE: IBDCServer_db
     ports:
       - "3306:3306"
     volumes:
       - IBDCServer-mysql-data:/var/lib/mysql
       - ./src/main/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./src/main/database/seed.sh:/docker-entrypoint-initdb.d/02-seed.sh:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 5s

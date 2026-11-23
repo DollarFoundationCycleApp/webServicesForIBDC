@@ -14,7 +14,7 @@ docker compose up
 ```
 3)
 ```
-http:localhost:8081
+http://localhost:8081/
 ```
 The port for Mobile App communication is 9000
 

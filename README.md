@@ -20,7 +20,7 @@ The port for Mobile App communication is 9000
 
 
 
-### Login Credentials (create user)
+### Login Credentials (or create user)
 
 | Role       | Username | Password   |
 |------------|----------|------------|

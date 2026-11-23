@@ -114,7 +114,7 @@ public class WebRequestHandler {
     private static ResponseCookie sessionCookie(String sessionToken) {
         return ResponseCookie.from("SESSION", sessionToken)
             .httpOnly(true)
-            .secure(true)
+            //.secure(true)
             .path("/")
             .sameSite("Lax")
             .maxAge(SESSION_LIFETIME)
@@ -128,7 +128,7 @@ public class WebRequestHandler {
                 AuthenticationController.logout(sessionToken);
                 ResponseCookie expCookie = ResponseCookie.from("SESSION", "")
                     .httpOnly(true)
-                    .secure(true)
+                    //.secure(true)
                     .path("/")
                     .maxAge(0)
                     .build();

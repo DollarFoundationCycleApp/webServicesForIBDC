@@ -88,9 +88,12 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,              -- Email address from sign-up
     password_hash VARCHAR(255) NOT NULL,             -- SHA-256 hash of the password
     is_admin TINYINT(1) DEFAULT 0 NOT NULL,          -- Set true for Admin accounts
+    is_superadmin TINYINT(1) UNIQUE NULL DEFAULT NULL, 
     is_suspended TINYINT(1) DEFAULT 0 NOT NULL,      -- Set true for suspended accounts
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT is_superadmin_admin
+        CHECK (is_superadmin IS NULL OR (is_superadmin = 1 AND is_admin = 1))
 );
 
 -- Upgrading an existing database: the columns above were added for the web

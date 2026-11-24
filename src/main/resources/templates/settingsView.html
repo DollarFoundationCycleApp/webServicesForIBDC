@@ -62,6 +62,30 @@
             </form>
         </section>
 
+        <section class="settings-card">
+            <h2>Notifications</h2>
+
+            <form th:action="@{/settings/notification-dot}" method="post" class="settings-form">
+                <label>
+                    <input type="checkbox" name="enabled" value="true"
+                           th:checked="${notificationDotEnabled}" />
+                    Show red dot for unread notifications
+                </label>
+                <div class="settings-row">
+                    <button type="submit">Save preference</button>
+                </div>
+            </form>
+
+            <div th:if="${notifications == null or #lists.isEmpty(notifications)}">
+                <p class="settings-current">No notifications.</p>
+            </div>
+
+            <div th:each="notification : ${notifications}" class="notification-item"
+                 th:classappend="${notification['is_viewed']} ? 'read' : 'unread'">
+                <span th:text="${notification['message']}">Notification</span>
+            </div>
+        </section>
+
         <script>
             (function () {
                 const input = document.getElementById('newPassword');

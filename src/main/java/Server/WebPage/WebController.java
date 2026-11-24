@@ -100,6 +100,16 @@ public class WebController {
         model.addAttribute("currentUsername", user != null ? user.username() : "");
         model.addAttribute("currentFullName", user != null ? user.fullName() : "");
         model.addAttribute("currentUserIsAdmin", user != null && user.isAdmin());
+
+        boolean hasUnreadNotifications = false;
+        boolean notificationDotEnabled = true;
+        if (user != null && db != null) {
+            hasUnreadNotifications = db.hasUnreadNotifications(user.userId());
+            notificationDotEnabled = db.isNotificationDotEnabled(user.userId());
+        }
+        model.addAttribute("hasUnreadNotifications", hasUnreadNotifications);
+        model.addAttribute("notificationDotEnabled", notificationDotEnabled);
+        model.addAttribute("showNotificationDot", hasUnreadNotifications && notificationDotEnabled);
     }
 
     /**
@@ -391,7 +401,11 @@ public class WebController {
                 .findFirst()
                 .orElse(null);
         if (target != null && db != null && data.databaseIds().contains(target.incidentId())) {
+            String ownerId = data.owners().get(target.incidentId());
             db.deleteIncident(Long.parseLong(target.incidentId()));
+            if (ownerId != null) {
+                db.createNotification(ownerId, "An incident you reported (ID " + target.incidentId() + ") was deleted.", "incident_deleted");
+            }
         }
         return "redirect:/incident"; }
 
@@ -730,6 +744,20 @@ public class WebController {
         model.addAttribute("fullName", fullName);
         model.addAttribute("accountFullName", fullName);
         model.addAttribute("currentFullName", fullName);
+
+        List<Map<String, Object>> notifications = new ArrayList<>();
+        boolean hasUnreadNotifications = false;
+        boolean notificationDotEnabled = true;
+        if (sess != null && db != null) {
+            notifications = db.getNotificationsByUser(sess.userId());
+            hasUnreadNotifications = db.hasUnreadNotifications(sess.userId());
+            notificationDotEnabled = db.isNotificationDotEnabled(sess.userId());
+            db.markAllNotificationsViewed(sess.userId());
+        }
+        model.addAttribute("notifications", notifications);
+        model.addAttribute("hasUnreadNotifications", hasUnreadNotifications);
+        model.addAttribute("notificationDotEnabled", notificationDotEnabled);
+        model.addAttribute("showNotificationDot", false);
         return "settingsView";
     }
 
@@ -916,6 +944,11 @@ public class WebController {
         String text = bugReport == null ? "" : bugReport.trim();
         if (!text.isEmpty()) {
             BUG_REPORTS.add(text);
+            if (db != null) {
+                for (String adminId : db.getAdminUserIds()) {
+                    db.createNotification(adminId, "Bug reported: " + text, "bug");
+                }
+            }
         }
         return "redirect:/settings";
     }
@@ -938,6 +971,43 @@ public class WebController {
 
     public String reportIssue(String session, String bugReport) {
         return reportBug(session, bugReport, null);
+    }
+
+    @PostMapping({"/settings/notification-dot", "/settings/notifications/dot"})
+    public String updateNotificationDotForm(@CookieValue(value = "SESSION", required = false) String session,
+                                           @RequestParam(required = false) Boolean enabled,
+                                           @RequestParam(required = false) String notificationDotEnabled,
+                                           Model model) {
+        boolean value = true;
+        if (enabled != null) {
+            value = enabled;
+        } else if (notificationDotEnabled != null) {
+            value = "true".equalsIgnoreCase(notificationDotEnabled)
+                    || "on".equalsIgnoreCase(notificationDotEnabled)
+                    || "1".equals(notificationDotEnabled);
+        }
+        return updateNotificationDotEnabled(session, value, model);
+    }
+
+    public String updateNotificationDotEnabled(String session, boolean enabled) {
+        return updateNotificationDotEnabled(session, enabled, null);
+    }
+
+    public String updateNotificationDotEnabled(String session, boolean enabled, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        if (db != null) {
+            AuthenticationController.Session sess = AuthenticationController.getSession(session);
+            if (sess != null) {
+                db.updateNotificationDotEnabled(sess.userId(), enabled);
+            }
+        }
+        return "redirect:/settings";
+    }
+
+    public String toggleNotificationDot(String session, boolean enabled) {
+        return updateNotificationDotEnabled(session, enabled, null);
     }
 }
 

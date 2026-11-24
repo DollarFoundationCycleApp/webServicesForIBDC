@@ -386,7 +386,7 @@ public class DatabaseCommunicationContext {
      *         cannot be reached.
      */
     public Map<String, Object> findUserByUsernameOrEmail(String usernameOrEmail) {
-        String sql = "SELECT user_id, username_or_email, full_name, email, password_hash, is_admin "
+        String sql = "SELECT user_id, username_or_email, full_name, email, password_hash, is_admin, notification_dot_enabled "
                 + "FROM users WHERE username_or_email = ? OR email = ? LIMIT 1";
 
         try (Connection conn = getConnection();
@@ -403,6 +403,7 @@ public class DatabaseCommunicationContext {
                 user.put("user_id", rs.getString("user_id"));
                 user.put("username_or_email", rs.getString("username_or_email"));
                 user.put("full_name", rs.getString("full_name"));
+                user.put("notification_dot_enabled", rs.getBoolean("notification_dot_enabled"));
                 user.put("email", rs.getString("email"));
                 user.put("password_hash", rs.getString("password_hash"));
                 user.put("is_admin", rs.getBoolean("is_admin"));
@@ -616,6 +617,162 @@ public class DatabaseCommunicationContext {
 
     public boolean updateUserPassword(String userId, String passwordHash) {
         return updatePasswordHash(userId, passwordHash);
+    }
+
+    /**
+     * Create a notification for an account.
+     */
+    public boolean createNotification(String userId, String message, String type) {
+        String sql = "INSERT INTO notifications (user_id, message, type, is_viewed) VALUES (?, ?, ?, 0)";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, userId);
+            ps.setString(2, message);
+            ps.setString(3, type == null ? "info" : type);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error creating notification: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean addNotification(String userId, String message) {
+        return createNotification(userId, message, "info");
+    }
+
+    public List<Map<String, Object>> getNotificationsByUser(String userId) {
+        List<Map<String, Object>> notifications = new ArrayList<>();
+        String sql = "SELECT notification_id, message, type, is_viewed, created_at "
+                + "FROM notifications WHERE user_id = ? ORDER BY created_at DESC, notification_id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> notification = new HashMap<>();
+                    notification.put("notification_id", rs.getLong("notification_id"));
+                    notification.put("message", rs.getString("message"));
+                    notification.put("type", rs.getString("type"));
+                    notification.put("is_viewed", rs.getBoolean("is_viewed"));
+                    notification.put("viewed", rs.getBoolean("is_viewed"));
+                    notification.put("seen", rs.getBoolean("is_viewed"));
+                    notification.put("created_at", rs.getTimestamp("created_at"));
+                    notifications.add(notification);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching notifications: " + e.getMessage());
+        }
+        return notifications;
+    }
+
+    public List<Map<String, Object>> getNotifications(String userId) {
+        return getNotificationsByUser(userId);
+    }
+
+    public boolean markNotificationViewed(long notificationId) {
+        String sql = "UPDATE notifications SET is_viewed = 1 WHERE notification_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, notificationId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error marking notification viewed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean markNotificationSeen(long notificationId) {
+        return markNotificationViewed(notificationId);
+    }
+
+    public boolean markAllNotificationsViewed(String userId) {
+        String sql = "UPDATE notifications SET is_viewed = 1 WHERE user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, userId);
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Error marking notifications viewed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean markAllNotificationsSeen(String userId) {
+        return markAllNotificationsViewed(userId);
+    }
+
+    public boolean hasUnreadNotifications(String userId) {
+        String sql = "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_viewed = 0";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error checking unread notifications: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean hasUnseenNotifications(String userId) {
+        return hasUnreadNotifications(userId);
+    }
+
+    public boolean isNotificationDotEnabled(String userId) {
+        String sql = "SELECT notification_dot_enabled FROM users WHERE user_id = ? LIMIT 1";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching notification dot setting: " + e.getMessage());
+        }
+        return true;
+    }
+
+    public boolean updateNotificationDotEnabled(String userId, boolean enabled) {
+        String sql = "UPDATE users SET notification_dot_enabled = ? WHERE user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setBoolean(1, enabled);
+            ps.setString(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating notification dot setting: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean setNotificationDotEnabled(String userId, boolean enabled) {
+        return updateNotificationDotEnabled(userId, enabled);
+    }
+
+    public List<String> getAdminUserIds() {
+        List<String> ids = new ArrayList<>();
+        String sql = "SELECT user_id FROM users WHERE is_admin = 1";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                ids.add(rs.getString("user_id"));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching admin users: " + e.getMessage());
+        }
+        return ids;
+    }
+
+    public List<String> getAdmins() {
+        return getAdminUserIds();
     }
 
     private static void closeQuietly(Connection conn) {

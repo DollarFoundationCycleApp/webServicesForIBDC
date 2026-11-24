@@ -1218,6 +1218,32 @@ a  {
     box-sizing: border-box;
 }
 
+.notification-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: auto;
+    background: #cc3333;
+    border-radius: 50%;
+}
+
+.notification-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.notification-item.unread {
+    background: #fff4ea;
+    border-left: 3px solid #ff6600;
+    font-weight: 600;
+}
+
+.notification-item.read {
+    background: #f5f5f5;
+    color: #555;
+}
+
 /* Password requirements */
 .password-requirements {
     list-style: none;

@@ -35,6 +35,7 @@
                 <a class="nav-row" th:classappend="${active == 'settings'} ? 'selected'" th:href="@{/settings}">
                     <image class="icon" th:src="@{/icons/cog.svg}" alt=""></image>
                     <span>Settings</span>
+                    <span class="notification-dot" th:if="${showNotificationDot}"></span>
                 </a>
             </nav>
         </div>

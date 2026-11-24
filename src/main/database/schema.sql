@@ -88,14 +88,28 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,              -- Email address from sign-up
     password_hash VARCHAR(255) NOT NULL,             -- SHA-256 hash of the password
     is_admin TINYINT(1) DEFAULT 0 NOT NULL,          -- Set true for Admin accounts
+    notification_dot_enabled TINYINT(1) DEFAULT 1 NOT NULL, -- Show unread notification dot
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,                   -- Account that receives the notification
+    message VARCHAR(1000) NOT NULL,                 -- Notification text
+    type VARCHAR(50) DEFAULT 'info' NOT NULL,        -- Notification category
+    is_viewed TINYINT(1) DEFAULT 0 NOT NULL,         -- Whether the account has seen it
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_notifications_user (user_id)
 );
 
 -- Upgrading an existing database: the columns above were added for the web
 -- sign-up page. If the users table already exists, run these once instead of
 -- re-creating it:
 --   ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL AFTER username_or_email;
+--   ALTER TABLE users ADD COLUMN notification_dot_enabled TINYINT(1) DEFAULT 1 NOT NULL AFTER is_admin;
 --   ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER full_name;
 --   ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '' AFTER email;
 --   ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);

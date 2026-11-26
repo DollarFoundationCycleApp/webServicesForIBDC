@@ -116,3 +116,31 @@ CREATE TABLE IF NOT EXISTS sessions (
     INDEX idx_auth_token_hash (auth_token_hash),
     INDEX idx_user_id (user_id)
 );
+
+-- Logs changes made to user accounts
+CREATE TABLE IF NOT EXISTS log_user_changes (
+    log_id BIGINT AUTO_iNCREMENT PRIMARY KEY,
+    target_user_id VARCHAR(255) NULL,               -- User the change is made from
+    actor_user_id VARCHAR(255) NULL,                -- User that made the change
+    action VARCHAR(50) NOT NULL,                    -- The action performed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (target_user_id) REFERENCES users(user_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (actor_user_id) REFERENCES users(user_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_target_user_id (target_user_id),
+    INDEX idx_created_at (created_at)
+);
+
+-- Logs changes made to incidents
+CREATE TABLE IF NOT EXISTS log_incident_changes (
+    log_id BIGINT AUTO_iNCREMENT PRIMARY KEY,
+    incident_id BIGINT NULL,                        -- Incident ID the change is made to
+    actor_user_id VARCHAR(255) NULL,                -- User that made the change
+    action VARCHAR(50) NOT NULL,                    -- The action performed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (actor_user_id) REFERENCES users(user_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_incident_id (incident_id),
+    INDEX idx_created_at (created_at)
+);

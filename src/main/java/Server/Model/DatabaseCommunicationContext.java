@@ -335,14 +335,27 @@ public class DatabaseCommunicationContext {
      *
      * @return true if a row was deleted, false otherwise.
      */
-    public boolean deleteIncident(long incidentId) {
+    public boolean deleteIncident(long incidentId, String userID) {
+        String setActor = "SET @actor_user_id = ?";
+        String clearActor = "SET @actor_user_id = NULL";
         String sql = "DELETE FROM incidents WHERE incident_id = ?";
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection()) {
+            try (PreparedStatement actorPs = conn.prepareStatement(setActor)) {
+                actorPs.setString(1, userID);
+                actorPs.executeUpdate();
+            }
 
-            ps.setLong(1, incidentId);
-            return ps.executeUpdate() > 0;
+            try {
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setLong  (1, incidentId);
+                    return ps.executeUpdate() > 0;
+                }
+            } finally {
+                try (Statement st = conn.createStatement()) {
+                    st.executeUpdate(clearActor);
+                }
+            }
         } catch (SQLException e) {
             System.err.println("Error deleting incident: " + e.getMessage());
             return false;

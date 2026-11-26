@@ -413,7 +413,7 @@ public class WebController {
                 .findFirst()
                 .orElse(null);
         if (target != null && db != null && data.databaseIds().contains(target.incidentId())) {
-            db.deleteIncident(Long.parseLong(target.incidentId()));
+            db.deleteIncident(Long.parseLong(target.incidentId()), AuthenticationController.getUserID(session));
         }
         return "redirect:/incident"; }
 

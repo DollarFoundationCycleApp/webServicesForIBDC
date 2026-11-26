@@ -178,6 +178,13 @@ public class AuthenticationController {
         return sessionId != null && activeSessions.containsKey(sessionId);
     }
 
+    public static String getUserID(String sessionId) {
+        if (sessionId == null || sessionId.isEmpty()) return null;
+
+        Session session = activeSessions.get(sessionId);
+        return session.userId;
+    }
+
     /** True only for sessions that belong to an admin account. */
     public static boolean isAdminSession(String sessionId) {
         Session session = getSession(sessionId);

@@ -62,7 +62,8 @@
             </div>
             <div class="date-range" id="date-range"
                  th:data-default-range="${active == 'heatmap' or rangeAllTime == true ? 'all-time' : 'month'}"
-                 th:data-range-start="${rangeStart}" th:data-range-stop="${rangeStop}">
+                 th:data-range-start="${rangeStart}" th:data-range-stop="${rangeStop}"
+                 th:data-time-start="${rangeStartTime}" th:data-time-stop="${rangeStopTime}">
                 <span id="date-range-text"></span>
                 <button type="button" class="calendar-button" id="calendar-button" aria-label="Open calendar" aria-expanded="false">
                     <image class="icon" th:src="@{/icons/calendar-month.svg}" alt=""></image>
@@ -84,6 +85,22 @@
                     </div>
                     <div class="calendar-grid" id="calendar-days"></div>
                     <button type="button" class="calendar-all-time" id="calendar-all-time" aria-pressed="false">All time</button>
+                    <div class="calendar-times">
+                        <div class="calendar-times-header">
+                            <span>Time of day</span>
+                            <button type="button" class="calendar-any-time" id="calendar-any-time">Any time</button>
+                        </div>
+                        <div class="calendar-times-row">
+                            <label class="calendar-time">
+                                <span>From</span>
+                                <input type="time" id="calendar-start-time" step="60">
+                            </label>
+                            <label class="calendar-time">
+                                <span>To</span>
+                                <input type="time" id="calendar-stop-time" step="60">
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

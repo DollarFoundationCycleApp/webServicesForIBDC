@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
@@ -59,6 +60,7 @@ public class WebController {
     private double mapZoom;
 
     private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("MM/dd/yyyy h:mm a");
+    private static final DateTimeFormatter TIME_INPUT = DateTimeFormatter.ofPattern("HH:mm");
 
     // Matches the textarea's maxlength; fits in the TEXT column even at 4 bytes per character
     private static final int MAX_ADDITIONAL_COMMENTS_LENGTH = 5000;
@@ -623,6 +625,8 @@ public class WebController {
      * allTime=true. It is kept in the session like the other filters so the
      * page buttons keep it; with no range chosen yet the 1st of the current
      * month through today is used, matching the calendar's default.
+     * The time-of-day window arrives as startTime/stopTime ("HH:mm") or
+     * anyTime=true, and is kept in the session the same way.
      */
     @GetMapping({"/reports"})
     public String reports(@CookieValue(value = "SESSION", required = false) String session,
@@ -631,6 +635,9 @@ public class WebController {
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate stop,
                         @RequestParam(defaultValue = "false") boolean allTime,
+                        @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime startTime,
+                        @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime stopTime,
+                        @RequestParam(defaultValue = "false") boolean anyTime,
                         HttpSession httpSession, Model model) {
         if (!AuthenticationController.isValidSession(session)) {
             return "redirect:/login";
@@ -673,9 +680,20 @@ public class WebController {
         LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();
         LocalDateTime rangeUntil = rangeAllTime ? null : rangeStop.plusDays(1).atStartOfDay();
 
+        if (anyTime) {
+            httpSession.removeAttribute("rangeStartTime");
+            httpSession.removeAttribute("rangeStopTime");
+        } else if (startTime != null && stopTime != null) {
+            httpSession.setAttribute("rangeStartTime", startTime);
+            httpSession.setAttribute("rangeStopTime", stopTime);
+        }
+        LocalTime timeFrom = (LocalTime) httpSession.getAttribute("rangeStartTime");
+        LocalTime timeUntil = (LocalTime) httpSession.getAttribute("rangeStopTime");
+
         List<Incident> filteredIncidents = loadIncidentData().incidents().stream()
                 .filter(incident -> rangeFrom == null
                         || (!incident.createdTime().isBefore(rangeFrom) && incident.createdTime().isBefore(rangeUntil)))
+                .filter(incident -> timeFilter(incident, timeFrom, timeUntil))
                 .filter(incident -> keywordFilter(incident, keyword))
                 .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                 .filter(incident -> yearFilter(incident, startYear, endYear))
@@ -708,6 +726,11 @@ public class WebController {
         model.addAttribute("rangeAllTime", rangeAllTime);
         model.addAttribute("rangeStart", rangeAllTime ? null : rangeStart.toString());
         model.addAttribute("rangeStop", rangeAllTime ? null : rangeStop.toString());
+        // "HH:mm", the format the calendar's time inputs use
+        if (timeFrom != null && timeUntil != null) {
+            model.addAttribute("rangeStartTime", timeFrom.format(TIME_INPUT));
+            model.addAttribute("rangeStopTime", timeUntil.format(TIME_INPUT));
+        }
 
         return "reportsView";
     }
@@ -761,11 +784,14 @@ public class WebController {
             // stop is inclusive, so include everything up to the start of the following day
             LocalDateTime rangeFrom = rangeAllTime ? null : rangeStart.atStartOfDay();
             LocalDateTime rangeUntil = rangeAllTime ? null : rangeStop.plusDays(1).atStartOfDay();
+            LocalTime timeFrom = (LocalTime) httpSession.getAttribute("rangeStartTime");
+            LocalTime timeUntil = (LocalTime) httpSession.getAttribute("rangeStopTime");
 
             return loadIncidentData().incidents().stream()
                     .filter(i -> selection.equals("filtered") || incidentIds.contains(i.incidentId()))
                     .filter(incident -> rangeFrom == null
                             || (!incident.createdTime().isBefore(rangeFrom) && incident.createdTime().isBefore(rangeUntil)))
+                    .filter(incident -> timeFilter(incident, timeFrom, timeUntil))
                     .filter(incident -> keywordFilter(incident, keyword))
                     .filter(incident -> vehicleFilter(incident, vehicleMake, vehicleModel, vehicleColor))
                     .filter(incident -> yearFilter(incident, startYear, endYear))
@@ -826,6 +852,23 @@ public class WebController {
         boolean colorMatches = vehicleColor == null || vehicleColor.isEmpty() || 
             incident.vehicleColor().toLowerCase().contains(vehicleColor.toLowerCase());
         return makeMatches && modelMatches && colorMatches;
+    }
+
+    /**
+     * Time-of-day window on every day; null means any time. The stop minute is
+     * inclusive, and a start after the stop wraps past midnight (22:00 - 02:00).
+     */
+    private static boolean timeFilter(Incident incident, LocalTime from, LocalTime until) {
+        if (from == null || until == null) {
+            return true;
+        }
+        int minute = incident.createdTime().getHour() * 60 + incident.createdTime().getMinute();
+        int fromMinute = from.getHour() * 60 + from.getMinute();
+        int untilMinute = until.getHour() * 60 + until.getMinute();
+        if (fromMinute <= untilMinute) {
+            return minute >= fromMinute && minute <= untilMinute;
+        }
+        return minute >= fromMinute || minute <= untilMinute;
     }
 
     private static boolean yearFilter(Incident incident, int startYear, int endYear) {

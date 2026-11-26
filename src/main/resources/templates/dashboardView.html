@@ -97,19 +97,11 @@
                         (lastVisible.getBoundingClientRect().bottom - incidentScroll.getBoundingClientRect().top) + 'px';
             }
 
-            // Total Incidents follows the calendar range; the Daily/Weekly/... trends stay relative to now
+            // Total Incidents follows the calendar range and time window; the Daily/Weekly/... trends stay relative to now
             const incidentTimes = Array.from(incidentRows, row => new Date(row.dataset.created).getTime());
 
             document.addEventListener('daterangechange', function (event) {
-                const start = event.detail.startDate;
-                const stop = event.detail.stopDate;
-                let count = incidentTimes.length;
-                if (start !== null) {
-                    // stopDate is inclusive, so count up to the start of the following day
-                    const from = start.getTime();
-                    const until = new Date(stop.getFullYear(), stop.getMonth(), stop.getDate() + 1).getTime();
-                    count = incidentTimes.filter(time => time >= from && time < until).length;
-                }
+                const count = incidentTimes.filter(time => event.detail.includes(time)).length;
                 document.getElementById('incident-count').textContent = count;
             });
         </script>

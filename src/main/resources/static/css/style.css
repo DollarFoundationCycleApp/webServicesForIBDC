@@ -299,6 +299,66 @@ body {
     font-weight: bold;
 }
 
+/* Time-of-day window under the calendar */
+.calendar-times {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eeeeee;
+}
+
+.calendar-times-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #777777;
+}
+
+.calendar-any-time {
+    border: none;
+    background: none;
+    padding: 0;
+    color: #ff6600;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.calendar-any-time:hover {
+    text-decoration: underline;
+}
+
+.calendar-times-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.calendar-time {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.7rem;
+    color: #777777;
+}
+
+.calendar-time input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 0.8rem;
+    color: #333333;
+}
+
+.calendar-time input:focus {
+    outline: none;
+    border-color: #ff6600;
+}
+
 /* Summary cards */
 .summary-cards {
     display: grid;

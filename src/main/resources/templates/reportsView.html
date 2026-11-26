@@ -296,6 +296,18 @@
                 const dateRange = document.getElementById('date-range');
                 const shownStart = dateRange.dataset.rangeStart || null;
                 const shownStop = dateRange.dataset.rangeStop || null;
+                const shownStartTime = dateRange.dataset.timeStart || null;
+                const shownStopTime = dateRange.dataset.timeStop || null;
+
+                // Minutes after midnight as "HH:mm", or null for any time of day
+                function isoTime(minutes) {
+                    if (minutes === null) {
+                        return null;
+                    }
+                    const hour = String(Math.floor(minutes / 60)).padStart(2, '0');
+                    const minute = String(minutes % 60).padStart(2, '0');
+                    return hour + ':' + minute;
+                }
 
                 function isoDate(date) {
                     if (date === null) {
@@ -309,7 +321,10 @@
                 document.addEventListener('daterangechange', function (event) {
                     const start = isoDate(event.detail.startDate);
                     const stop = isoDate(event.detail.stopDate);
-                    if (start === shownStart && stop === shownStop) {
+                    const startTime = isoTime(event.detail.startTime);
+                    const stopTime = isoTime(event.detail.stopTime);
+                    if (start === shownStart && stop === shownStop
+                            && startTime === shownStartTime && stopTime === shownStopTime) {
                         return;
                     }
                     const params = new URLSearchParams({ limit: document.querySelector('input[name="limit"]').value });
@@ -318,6 +333,12 @@
                     } else {
                         params.set('start', start);
                         params.set('stop', stop);
+                    }
+                    if (startTime === null) {
+                        params.set('anyTime', 'true');
+                    } else {
+                        params.set('startTime', startTime);
+                        params.set('stopTime', stopTime);
                     }
                     window.location.href = '/reports?' + params.toString();
                 });

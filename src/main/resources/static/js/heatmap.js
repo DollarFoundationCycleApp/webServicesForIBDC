@@ -115,18 +115,17 @@
         return marker;
     });
 
-    // Calendar date range; only incidents inside it are shown. Set by the 'daterangechange' event.
+    // Calendar date range and time window; only incidents inside them are shown. Set by the 'daterangechange' event.
     var incidentTimes = incidents.map(function (incident) {
         return new Date(incident.createdIso).getTime();
     });
-    var rangeStart = null;
-    var rangeEnd = null;
+    var rangeIncludes = null;
 
     function inRange(index) {
-        if (rangeStart === null) {
+        if (rangeIncludes === null) {
             return true;
         }
-        return incidentTimes[index] >= rangeStart && incidentTimes[index] < rangeEnd;
+        return rangeIncludes(incidentTimes[index]);
     }
 
     function updatePins(force) {
@@ -160,17 +159,7 @@
     }
 
     document.addEventListener('daterangechange', function (event) {
-        var start = event.detail.startDate;
-        var stop = event.detail.stopDate;
-        if (start === null) {
-            // "All time": show every incident
-            rangeStart = null;
-            rangeEnd = null;
-        } else {
-            rangeStart = start.getTime();
-            // stopDate is inclusive, so include everything up to the start of the following day
-            rangeEnd = new Date(stop.getFullYear(), stop.getMonth(), stop.getDate() + 1).getTime();
-        }
+        rangeIncludes = event.detail.includes;
         var source = map.getSource('incidents');
         if (source) {
             source.setData(heatmapData());

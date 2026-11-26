@@ -10,7 +10,7 @@
                     <image class="icon" src="icons/camera.svg" alt=""></image>
                     <span>Total Incidents</span>
                 </div>
-                <div class="card-value" th:text="${incidentCount}">1102</div>
+                <div class="card-value" id="incident-count" th:text="${incidentCount}">1102</div>
                 <div class="card-trend-list">
                     <div th:each="trend : ${incidentTrends}" class="card-trend-row">
                         <span class="card-trend-note" th:text="${trend.label}">Daily</span>
@@ -96,6 +96,22 @@
                 incidentScroll.style.maxHeight =
                         (lastVisible.getBoundingClientRect().bottom - incidentScroll.getBoundingClientRect().top) + 'px';
             }
+
+            // Total Incidents follows the calendar range; the Daily/Weekly/... trends stay relative to now
+            const incidentTimes = Array.from(incidentRows, row => new Date(row.dataset.created).getTime());
+
+            document.addEventListener('daterangechange', function (event) {
+                const start = event.detail.startDate;
+                const stop = event.detail.stopDate;
+                let count = incidentTimes.length;
+                if (start !== null) {
+                    // stopDate is inclusive, so count up to the start of the following day
+                    const from = start.getTime();
+                    const until = new Date(stop.getFullYear(), stop.getMonth(), stop.getDate() + 1).getTime();
+                    count = incidentTimes.filter(time => time >= from && time < until).length;
+                }
+                document.getElementById('incident-count').textContent = count;
+            });
         </script>
     </th:block>
 </body>

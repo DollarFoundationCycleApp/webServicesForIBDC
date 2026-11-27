@@ -177,24 +177,61 @@ body {
 }
 
 .date-range {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    width: 280px;
     border: 1px solid #d8d8d8;
     background-color: #ffffff;
-    padding: 8px 12px;
     border-radius: 4px;
     font-size: 0.85rem;
     color: #333333;
     position: relative;
 }
 
-/* Calendar popup */
+/* The whole box opens the calendar: dates on top, time of day below, icon on the right */
 .calendar-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
     border: none;
     background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
     cursor: pointer;
 }
+
+.date-range-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+
+.date-range-dates,
+.date-range-time {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.date-range-dates {
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #111111;
+}
+
+.date-range-time {
+    font-size: 0.8rem;
+    color: #ff6600;
+}
+
+.date-range-time.any-time {
+    color: #777777;
+}
+
+/* Calendar popup */
 
 .calendar-popup {
     position: absolute;
@@ -310,29 +347,60 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
     font-size: 0.75rem;
     font-weight: bold;
     color: #777777;
-}
-
-.calendar-any-time {
-    border: none;
-    background: none;
-    padding: 0;
-    color: #ff6600;
-    font-size: 0.75rem;
     cursor: pointer;
 }
 
-.calendar-any-time:hover {
-    text-decoration: underline;
+/* Checkbox drawn as an on/off switch */
+.calendar-time-toggle {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 30px;
+    height: 16px;
+    margin: 0;
+    border-radius: 8px;
+    background-color: #d8d8d8;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.calendar-time-toggle::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    transition: transform 0.2s ease;
+}
+
+.calendar-time-toggle:checked {
+    background-color: #ff6600;
+}
+
+.calendar-time-toggle:checked::before {
+    transform: translateX(14px);
+}
+
+.calendar-time-toggle:focus-visible {
+    outline: 2px solid #ff6600;
+    outline-offset: 2px;
 }
 
 .calendar-times-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    margin-top: 8px;
+}
+
+.calendar-times-row[hidden] {
+    display: none;
 }
 
 .calendar-time {

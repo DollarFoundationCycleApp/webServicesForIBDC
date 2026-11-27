@@ -4,10 +4,12 @@
     var title = document.getElementById('calendar-title');
     var days = document.getElementById('calendar-days');
     var rangeText = document.getElementById('date-range-text');
+    var timeText = document.getElementById('date-range-time');
     var allTimeButton = document.getElementById('calendar-all-time');
     var startTimeInput = document.getElementById('calendar-start-time');
     var stopTimeInput = document.getElementById('calendar-stop-time');
-    var anyTimeButton = document.getElementById('calendar-any-time');
+    var timeToggle = document.getElementById('calendar-time-toggle');
+    var timesRow = document.getElementById('calendar-times-row');
     var shownMonth = new Date();
     shownMonth.setDate(1);
     // Default range is the current month so far: the 1st through today
@@ -19,7 +21,7 @@
     var stopTime = null;
 
     // Lets pages react to a completed range; stopDate is inclusive.
-    // "All time" is announced with both dates null; "any time of day" with both times null.
+    // "All dates" is announced with both dates null; "any time of day" with both times null.
     // detail.includes(time) tells a page whether a timestamp (ms) falls inside the dates and the time window.
     function announceRange() {
         // Snapshot the selection so later clicks don't change a range a page already received
@@ -69,72 +71,53 @@
         return Number(parts[0]) * 60 + Number(parts[1]);
     }
 
-    // "2" or "5:30", without AM/PM
+    // "10:01 AM"
     function clockText(minutes) {
         var hour = Math.floor(minutes / 60) % 12;
         if (hour === 0) {
             hour = 12;
         }
-        var text = String(hour);
-        if (minutes % 60 !== 0) {
-            text += ':' + String(minutes % 60).padStart(2, '0');
+        var period = 'AM';
+        if (minutes >= 12 * 60) {
+            period = 'PM';
         }
-        return text;
+        return hour + ':' + String(minutes % 60).padStart(2, '0') + ' ' + period;
     }
 
-    function periodText(minutes) {
-        if (minutes < 12 * 60) {
-            return 'AM';
-        }
-        return 'PM';
-    }
-
-    // "2–6 AM", or "10 PM–2 AM" when the times are in different halves of the day
+    // "10:01 AM – 10:17 PM"
     function timeRangeText() {
         if (startTime === stopTime) {
-            return clockText(startTime) + ' ' + periodText(startTime);
+            return clockText(startTime);
         }
-        if (periodText(startTime) === periodText(stopTime)) {
-            return clockText(startTime) + '–' + clockText(stopTime) + ' ' + periodText(startTime);
-        }
-        return clockText(startTime) + ' ' + periodText(startTime) + '–' + clockText(stopTime) + ' ' + periodText(stopTime);
+        return clockText(startTime) + ' – ' + clockText(stopTime);
     }
 
-    // "Oct 1–31", "Oct 28 – Nov 3", with the year only when it isn't the current one
+    // "Nov 1 – Nov 26, 2026", or "Dec 28, 2025 – Jan 3, 2026" across years
     function dateRangeText() {
-        var thisYear = new Date().getFullYear();
         if (stopDate === null) {
-            return formatDate(startDate, startDate.getFullYear() !== thisYear) + ' –';
+            return formatDate(startDate, true) + ' –';
+        }
+        if (startDate.getTime() === stopDate.getTime()) {
+            return formatDate(startDate, true);
         }
         var sameYear = startDate.getFullYear() === stopDate.getFullYear();
-        if (!sameYear) {
-            return formatDate(startDate, true) + ' – ' + formatDate(stopDate, true);
-        }
-        var text;
-        if (startDate.getMonth() === stopDate.getMonth()) {
-            text = formatDate(startDate, false);
-            if (startDate.getDate() !== stopDate.getDate()) {
-                text += '–' + stopDate.getDate();
-            }
-        } else {
-            text = formatDate(startDate, false) + ' – ' + formatDate(stopDate, false);
-        }
-        if (startDate.getFullYear() !== thisYear) {
-            text += ', ' + startDate.getFullYear();
-        }
-        return text;
+        return formatDate(startDate, !sameYear) + ' – ' + formatDate(stopDate, true);
     }
 
-    // Dates (or "All time"), plus the time window when one is set: "Oct 1–31 · 2–6 AM"
+    // Dates (or "All dates") on the top line; the time window, or "Any time of day" in gray, below
     function showRangeText() {
-        var text = 'All time';
+        var text = 'All dates';
         if (startDate !== null) {
             text = dateRangeText();
         }
-        if (startTime !== null) {
-            text += ' · ' + timeRangeText();
-        }
         rangeText.textContent = text;
+        if (startTime === null) {
+            timeText.textContent = 'Any time of day';
+            timeText.classList.add('any-time');
+        } else {
+            timeText.textContent = timeRangeText();
+            timeText.classList.remove('any-time');
+        }
     }
 
     // The window applies once both times are filled in; clearing either one removes it
@@ -160,10 +143,16 @@
     startTimeInput.addEventListener('change', changeTimes);
     stopTimeInput.addEventListener('change', changeTimes);
 
-    anyTimeButton.addEventListener('click', function () {
-        startTimeInput.value = '';
-        stopTimeInput.value = '';
-        changeTimes();
+    // Turning the toggle on shows From/To; turning it off clears the time window and leaves the dates alone
+    timeToggle.addEventListener('change', function () {
+        timesRow.hidden = !timeToggle.checked;
+        if (timeToggle.checked) {
+            startTimeInput.focus();
+        } else {
+            startTimeInput.value = '';
+            stopTimeInput.value = '';
+            changeTimes();
+        }
     });
 
     // First click sets the start date, second sets the stop date, third starts a new range
@@ -291,7 +280,7 @@
         return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     }
 
-    // Each page picks its starting range: the heatmap starts on "All time", other pages on the current month.
+    // Each page picks its starting range: the heatmap starts on "All dates", other pages on the current month.
     // A page filtered on the server (reports) passes its range in so the calendar shows it after reloading.
     var dateRange = document.getElementById('date-range');
     if (dateRange.dataset.defaultRange === 'all-time') {
@@ -309,6 +298,8 @@
         stopTimeInput.value = dateRange.dataset.timeStop;
         startTime = parseTime(dateRange.dataset.timeStart);
         stopTime = parseTime(dateRange.dataset.timeStop);
+        timeToggle.checked = true;
+        timesRow.hidden = false;
     }
     showRangeText();
     announceRange();

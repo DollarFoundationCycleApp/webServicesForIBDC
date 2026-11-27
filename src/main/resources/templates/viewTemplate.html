@@ -64,8 +64,11 @@
                  th:data-default-range="${active == 'heatmap' or rangeAllTime == true ? 'all-time' : 'month'}"
                  th:data-range-start="${rangeStart}" th:data-range-stop="${rangeStop}"
                  th:data-time-start="${rangeStartTime}" th:data-time-stop="${rangeStopTime}">
-                <span id="date-range-text"></span>
-                <button type="button" class="calendar-button" id="calendar-button" aria-label="Open calendar" aria-expanded="false">
+                <button type="button" class="calendar-button" id="calendar-button" aria-haspopup="dialog" aria-expanded="false" title="Open calendar">
+                    <span class="date-range-labels">
+                        <span class="date-range-dates" id="date-range-text"></span>
+                        <span class="date-range-time" id="date-range-time"></span>
+                    </span>
                     <image class="icon" th:src="@{/icons/calendar-month.svg}" alt=""></image>
                 </button>
                 <div class="calendar-popup" id="calendar-popup" hidden>
@@ -84,13 +87,13 @@
                         <span class="calendar-weekday">Sa</span>
                     </div>
                     <div class="calendar-grid" id="calendar-days"></div>
-                    <button type="button" class="calendar-all-time" id="calendar-all-time" aria-pressed="false">All time</button>
+                    <button type="button" class="calendar-all-time" id="calendar-all-time" aria-pressed="false">All dates</button>
                     <div class="calendar-times">
-                        <div class="calendar-times-header">
+                        <label class="calendar-times-header">
                             <span>Time of day</span>
-                            <button type="button" class="calendar-any-time" id="calendar-any-time">Any time</button>
-                        </div>
-                        <div class="calendar-times-row">
+                            <input type="checkbox" class="calendar-time-toggle" id="calendar-time-toggle" role="switch">
+                        </label>
+                        <div class="calendar-times-row" id="calendar-times-row" hidden>
                             <label class="calendar-time">
                                 <span>From</span>
                                 <input type="time" id="calendar-start-time" step="60">

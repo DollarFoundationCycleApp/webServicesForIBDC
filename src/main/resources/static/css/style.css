@@ -1228,6 +1228,9 @@ a  {
 }
 
 .notification-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 12px;
     border-radius: 8px;
     margin-bottom: 8px;
@@ -1242,6 +1245,19 @@ a  {
 .notification-item.read {
     background: #f5f5f5;
     color: #555;
+}
+
+.notification-delete-form {
+    display: inline-block;
+    margin-left: auto;
+}
+
+.trash-button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 4px;
 }
 
 /* Password requirements */

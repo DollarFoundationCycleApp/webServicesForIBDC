@@ -107,6 +107,12 @@ public class WebController {
             hasUnreadNotifications = db.hasUnreadNotifications(user.userId());
             notificationDotEnabled = db.isNotificationDotEnabled(user.userId());
         }
+        if (user != null && user.isAdmin() && !UNREAD_BUG_REPORTS.isEmpty()) {
+            hasUnreadNotifications = true;
+            if (db == null) {
+                notificationDotEnabled = true;
+            }
+        }
         model.addAttribute("hasUnreadNotifications", hasUnreadNotifications);
         model.addAttribute("notificationDotEnabled", notificationDotEnabled);
         model.addAttribute("showNotificationDot", hasUnreadNotifications && notificationDotEnabled);
@@ -754,6 +760,29 @@ public class WebController {
             notificationDotEnabled = db.isNotificationDotEnabled(sess.userId());
             db.markAllNotificationsViewed(sess.userId());
         }
+        if (sess != null && sess.isAdmin()) {
+            List<String> unreadBugs = new ArrayList<>(UNREAD_BUG_REPORTS);
+            List<String> seenBugs = new ArrayList<>(SEEN_BUG_REPORTS);
+            for (String bug : unreadBugs) {
+                Map<String, Object> n = new HashMap<>();
+                n.put("message", "Bug reported: " + bug);
+                n.put("is_viewed", false);
+                n.put("viewed", false);
+                notifications.add(0, n);
+                hasUnreadNotifications = true;
+            }
+            for (String bug : seenBugs) {
+                Map<String, Object> n = new HashMap<>();
+                n.put("message", "Bug reported: " + bug);
+                n.put("is_viewed", true);
+                n.put("viewed", true);
+                notifications.add(n);
+            }
+            if (!unreadBugs.isEmpty()) {
+                SEEN_BUG_REPORTS.addAll(UNREAD_BUG_REPORTS);
+                UNREAD_BUG_REPORTS.clear();
+            }
+        }
         model.addAttribute("notifications", notifications);
         model.addAttribute("hasUnreadNotifications", hasUnreadNotifications);
         model.addAttribute("notificationDotEnabled", notificationDotEnabled);
@@ -910,9 +939,19 @@ public class WebController {
     }
 
     private static final List<String> BUG_REPORTS = new ArrayList<>();
+    private static final List<String> UNREAD_BUG_REPORTS = new ArrayList<>();
+    private static final List<String> SEEN_BUG_REPORTS = new ArrayList<>();
 
     public static List<String> getBugReports() {
         return BUG_REPORTS;
+    }
+
+    public static List<String> getUnreadBugReports() {
+        return UNREAD_BUG_REPORTS;
+    }
+
+    public static List<String> getSeenBugReports() {
+        return SEEN_BUG_REPORTS;
     }
 
     @PostMapping({"/settings/bug-report", "/settings/report-bug", "/settings/bug"})
@@ -945,9 +984,16 @@ public class WebController {
         if (!text.isEmpty()) {
             BUG_REPORTS.add(text);
             if (db != null) {
-                for (String adminId : db.getAdminUserIds()) {
-                    db.createNotification(adminId, "Bug reported: " + text, "bug");
+                List<String> adminIds = db.getAdminUserIds();
+                if (!adminIds.isEmpty()) {
+                    for (String adminId : adminIds) {
+                        db.createNotification(adminId, "Bug reported: " + text, "bug");
+                    }
+                } else {
+                    UNREAD_BUG_REPORTS.add(text);
                 }
+            } else {
+                UNREAD_BUG_REPORTS.add(text);
             }
         }
         return "redirect:/settings";
@@ -978,13 +1024,14 @@ public class WebController {
                                            @RequestParam(required = false) Boolean enabled,
                                            @RequestParam(required = false) String notificationDotEnabled,
                                            Model model) {
-        boolean value = true;
-        if (enabled != null) {
-            value = enabled;
-        } else if (notificationDotEnabled != null) {
+        boolean value = enabled != null;
+        if (notificationDotEnabled != null) {
             value = "true".equalsIgnoreCase(notificationDotEnabled)
                     || "on".equalsIgnoreCase(notificationDotEnabled)
                     || "1".equals(notificationDotEnabled);
+        }
+        if (enabled != null) {
+            value = enabled;
         }
         return updateNotificationDotEnabled(session, value, model);
     }
@@ -1008,6 +1055,51 @@ public class WebController {
 
     public String toggleNotificationDot(String session, boolean enabled) {
         return updateNotificationDotEnabled(session, enabled, null);
+    }
+
+    @PostMapping({"/settings/notifications/delete", "/settings/notifications/{id}/delete",
+            "/settings/notification/delete", "/settings/notification/{id}/delete"})
+    public String deleteNotificationForm(@CookieValue(value = "SESSION", required = false) String session,
+                                        @PathVariable(required = false) Long id,
+                                        @RequestParam(required = false) Long notificationId,
+                                        @RequestParam(required = false) String message,
+                                        Model model) {
+        Long targetId = id != null ? id : notificationId;
+        return deleteNotification(session, targetId, message, model);
+    }
+
+    public String deleteNotification(String session, Long notificationId) {
+        return deleteNotification(session, notificationId, null, null);
+    }
+
+    public String deleteNotification(String session, Long notificationId, String message) {
+        return deleteNotification(session, notificationId, message, null);
+    }
+
+    public String deleteNotification(String session, Long notificationId, String message, Model model) {
+        if (!AuthenticationController.isValidSession(session)) {
+            return "redirect:/login";
+        }
+        String bugText = message != null && message.startsWith("Bug reported: ")
+                ? message.substring("Bug reported: ".length()) : message;
+        UNREAD_BUG_REPORTS.remove(bugText);
+        SEEN_BUG_REPORTS.remove(bugText);
+
+        if (db != null) {
+            AuthenticationController.Session sess = AuthenticationController.getSession(session);
+            if (sess != null && notificationId != null && notificationId > 0) {
+                db.deleteNotification(sess.userId(), notificationId);
+            }
+        }
+        return "redirect:/settings";
+    }
+
+    public String removeNotification(String session, Long notificationId) {
+        return deleteNotification(session, notificationId, null, null);
+    }
+
+    public String removeNotification(String session, Long notificationId, String message) {
+        return deleteNotification(session, notificationId, message, null);
     }
 }
 

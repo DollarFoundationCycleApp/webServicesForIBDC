@@ -703,6 +703,39 @@ public class DatabaseCommunicationContext {
         return markAllNotificationsViewed(userId);
     }
 
+    public boolean deleteNotification(long notificationId) {
+        String sql = "DELETE FROM notifications WHERE notification_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, notificationId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting notification: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean deleteNotification(String userId, long notificationId) {
+        String sql = "DELETE FROM notifications WHERE notification_id = ? AND user_id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, notificationId);
+            ps.setString(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting notification: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean removeNotification(long notificationId) {
+        return deleteNotification(notificationId);
+    }
+
+    public boolean removeNotification(String userId, long notificationId) {
+        return deleteNotification(userId, notificationId);
+    }
+
     public boolean hasUnreadNotifications(String userId) {
         String sql = "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_viewed = 0";
         try (Connection conn = getConnection();

@@ -83,6 +83,16 @@
             <div th:each="notification : ${notifications}" class="notification-item"
                  th:classappend="${notification['is_viewed']} ? 'read' : 'unread'">
                 <span th:text="${notification['message']}">Notification</span>
+                <form th:action="@{/settings/notifications/delete}" method="post" class="notification-delete-form"
+                      onsubmit="return confirm('Delete this notification?');">
+                    <input type="hidden" name="notificationId"
+                           th:value="${notification['notification_id']}" />
+                    <input type="hidden" name="message"
+                           th:value="${notification['message']}" />
+                    <button type="submit" class="trash-button" aria-label="Delete notification">
+                        <image class="icon" th:src="@{/icons/trash.svg}" alt="Delete" />
+                    </button>
+                </form>
             </div>
         </section>
 
